@@ -1,0 +1,14 @@
+@import "flowbite/src/themes/default";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional in your global CSS */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
