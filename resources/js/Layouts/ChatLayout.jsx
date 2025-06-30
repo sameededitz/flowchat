@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/react'
 import { Dropdown, DropdownDivider, DropdownHeader, DropdownItem, Tooltip } from "flowbite-react";
 import React, { useEffect, useState } from 'react'
 
-const ChatLayout = ({ user, children }) => {
+const ChatLayout = ({ children }) => {
     const page = usePage();
 
     const conversations = page.props.conversations;
@@ -122,8 +122,7 @@ const ChatLayout = ({ user, children }) => {
             </nav >
 
             <div className="flex-1 w-full flex overflow-hidden bg-white text-gray-900 dark:text-white dark:bg-gray-800 dark:border-gray-700 h-screen">
-                <div
-                    className={`transition-all w-full sm:w-[220px] md:w-[300px] bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden sm:block' : 'block'}`}
+                <div className={`h-full transition-all w-full sm:w-[220px] md:w-[300px] bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
                 >
                     <div className='flex items-center justify-between py-2 px-3 text-xl font-medium'>
                         <span>Conversations</span>
@@ -154,7 +153,7 @@ const ChatLayout = ({ user, children }) => {
                         )}
                     </div>
                 </div>
-                <div className='flex flex-1 flex-col overflow-hidden'>
+                <div className='flex flex-1 flex-col h-full overflow-hidden'>
                     {children}
                 </div>
             </div>

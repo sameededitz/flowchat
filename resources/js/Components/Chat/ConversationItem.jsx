@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import React from 'react'
 import UserAvatar from './UserAvatar';
 import GroupAvatar from './GroupAvatar';

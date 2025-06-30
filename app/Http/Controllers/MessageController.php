@@ -31,7 +31,7 @@ class MessageController extends Controller
 
         return Inertia::render('Home', [
             'selectedConversation' => $user->toConversationArray(),
-            'messages' => $messages->toResource(),
+            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments'])),
         ]);
     }
 
@@ -43,7 +43,7 @@ class MessageController extends Controller
 
         return Inertia::render('Home', [
             'selectedConversation' => $group->toConversationArray(),
-            'messages' => $messages->toResource(),
+            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments'])),
         ]);
     }
 
@@ -66,7 +66,7 @@ class MessageController extends Controller
                 ->paginate(10);
         }
 
-        return MessageResource::collection($messages);
+        return MessageResource::collection($messages->load(['sender', 'receiver', 'attachments']));
     }
 
     public function store(MessageRequest $request)
