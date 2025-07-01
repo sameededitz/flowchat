@@ -12,3 +12,10 @@
   background-color: #cbd5e1;
   border-radius: 3px;
 }
+
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}

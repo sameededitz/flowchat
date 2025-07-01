@@ -1,7 +1,7 @@
 import ConversationItem from '@/Components/Chat/ConversationItem';
 import Iconify from '@/Components/Iconify';
 import TextInput from '@/Components/TextInput';
-import { usePage } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 import { Dropdown, DropdownDivider, DropdownHeader, DropdownItem, Tooltip } from "flowbite-react";
 import React, { useEffect, useState } from 'react'
 
@@ -79,52 +79,54 @@ const ChatLayout = ({ children }) => {
     }, []);
 
     return (
-        <>
-            <nav className=" z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+            {/* Navbar */}
+            <nav className="w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-3 py-3 lg:px-5 lg:pl-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center justify-start rtl:justify-end">
-                            <a href="https://flowbite.com" className="flex ms-2 md:me-24">
-                                <img src="https://flowbite.com/docs/images/logo.svg" className="h-8 me-3" alt="FlowBite Logo" />
-                                <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">Flowbite</span>
-                            </a>
+                            <Link href={route('home')} className="flex ms-2 md:me-24">
+                                <img
+                                    src="https://flowbite.com/docs/images/logo.svg"
+                                    className="h-8 me-3"
+                                    alt="FlowBite Logo"
+                                />
+                                <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">
+                                    Flowbite
+                                </span>
+                            </Link>
                         </div>
                         <div className="flex items-center">
                             <div className="flex items-center ms-3">
-                                <Dropdown
-                                    arrowIcon={false}
-                                    inline={true}
-                                    label={
-                                        <div className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
-                                            <span className="sr-only">Open user menu</span>
-                                            <img className="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg" alt="user photo" />
-                                        </div>
-                                    }
-                                >
-                                    <DropdownHeader>
-                                        <span className="block text-sm">Neil Sims</span>
-                                        <span className="block truncate text-sm font-medium">neil.sims@flowbite.com</span>
-                                    </DropdownHeader>
-                                    <DropdownItem>
+                                <Dropdown arrowIcon={false} inline={true} label={
+                                    <div className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
+                                        <span className="sr-only">Open user menu</span>
+                                        <img className="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg" alt="user photo" />
+                                    </div>
+                                }>
+                                    <Dropdown.Item>
                                         <Iconify icon="mdi:home" className="w-4 h-4 me-2" />
                                         Dashboard
-                                    </DropdownItem>
-                                    <DropdownDivider />
-                                    <DropdownItem>
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item>
                                         <Iconify icon="mdi:settings" className="w-4 h-4 me-2" />
                                         Logout
-                                    </DropdownItem>
+                                    </Dropdown.Item>
                                 </Dropdown>
                             </div>
                         </div>
                     </div>
                 </div>
-            </nav >
+            </nav>
 
-            <div className="flex-1 w-full flex overflow-hidden bg-white text-gray-900 dark:text-white dark:bg-gray-800 dark:border-gray-700 h-screen">
-                <div className={`h-full transition-all w-full sm:w-[220px] md:w-[300px] bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
+            {/* Main Chat Layout */}
+            <div className="flex-1 w-full flex overflow-hidden bg-white text-gray-900 dark:text-white dark:bg-gray-800 dark:border-gray-700">
+                {/* Sidebar */}
+                <div
+                    className={`transition-all w-full sm:w-[220px] md:w-[300px] bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
                 >
-                    <div className='flex items-center justify-between py-2 px-3 text-xl font-medium'>
+                    <div className="flex items-center justify-between py-2 px-3 text-xl font-medium">
                         <span>Conversations</span>
                         <Tooltip content="New Conversation">
                             <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
@@ -132,32 +134,31 @@ const ChatLayout = ({ children }) => {
                             </button>
                         </Tooltip>
                     </div>
-                    <div className='px-2 py-2'>
+                    <div className="px-2 py-2">
                         <TextInput onKeyUp={handleSearch} placeholder="Search conversations..." className="w-full" />
                     </div>
-                    <div className='flex-1 overflow-y-auto px-1'>
-                        {sortedConversations?.length > 0 ? (
-                            sortedConversations.map((conversation) => (
+                    <div className="flex-1 overflow-y-auto px-1">
+                        {localConversations?.length > 0 ? (
+                            localConversations.map((conversation) => (
                                 <ConversationItem
-                                    key={`${conversation.is_group
-                                        ? "group_" + conversation.id
-                                        : "user_" + conversation.id
-                                        }`}
+                                    key={`${conversation.is_group ? "group_" + conversation.id : "user_" + conversation.id}`}
                                     conversation={conversation}
                                     online={!!isUserOnline(conversation.is_group ? null : conversation.id)}
                                     selectedConversation={selectedConversation}
                                 />
                             ))
                         ) : (
-                            <div className='p-3 text-md text-center text-gray-500'>No conversations found.</div>
+                            <div className="p-3 text-md text-center text-gray-500">No conversations found.</div>
                         )}
                     </div>
                 </div>
-                <div className='flex flex-1 flex-col h-full overflow-hidden'>
+
+                {/* Messages and other content */}
+                <div className="flex-1 flex flex-col min-h-0">
                     {children}
                 </div>
             </div>
-        </>
+        </div>
     )
 }
 
