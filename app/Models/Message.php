@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Http\Resources\MessageResource;
 
 class Message extends Model
 {
@@ -40,5 +41,16 @@ class Message extends Model
     public function attachments()
     {
         return $this->hasMany(MessageAttachment::class);
+    }
+
+    /**
+     * Convert the message to a resource for WebSocket broadcasting
+     *
+     * @return array
+     */
+    public function toBroadcastResource()
+    {
+        $this->load(['sender', 'receiver', 'attachments']);
+        return (new MessageResource($this))->toArray(request());
     }
 }

@@ -8,13 +8,10 @@ use Inertia\Inertia;
 use App\Models\Group;
 use App\Models\Message;
 use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\MessageRequest;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
-use App\Models\MessageAttachment;
-use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
@@ -31,7 +28,7 @@ class MessageController extends Controller
 
         return Inertia::render('Home', [
             'selectedConversation' => $user->toConversationArray(),
-            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments'])),
+            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments']))->response()->getData(),
         ]);
     }
 
@@ -121,9 +118,10 @@ class MessageController extends Controller
             );
         }
 
+        $message->load(['sender', 'receiver', 'attachments']);
         SocketMessage::dispatch($message);
 
-        return new MessageResource($message->load(['sender', 'receiver', 'attachments']));
+        return new MessageResource($message);
     }
 
     public function destroy(Message $message)

@@ -4,11 +4,14 @@ import MessageItem from '@/Components/Chat/MessageItem'
 import Iconify from '@/Components/Iconify'
 import ChatLayout from '@/Layouts/ChatLayout'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { usePage } from '@inertiajs/react'
+import { useEventBus } from '@/EventBus'
 
 function Home({ messages, selectedConversation }) {
-    console.log('messages', messages);
-
     const [localMessages, setLocalMessages] = useState([])
+    const { props } = usePage()
+    const user = props.auth.user
+    const { on } = useEventBus()
 
     const messagesCtrRef = useRef(null);
 
@@ -27,6 +30,29 @@ function Home({ messages, selectedConversation }) {
             setLocalMessages(messages?.data.reverse() || []);
         }
     }, [messages])
+
+    const handleNewMessage = (newMessage) => {
+        setLocalMessages(prevMessages => {
+            const messageExists = prevMessages.some(msg => msg.id === newMessage.id);
+            if (messageExists) {
+                return prevMessages;
+            }
+            return [...prevMessages, newMessage];
+        });
+    };
+
+    useEffect(() => {
+        if (!selectedConversation) return;
+
+        const unsubscribe = on('message.received', ({ message, conversationId, isGroup }) => {
+            if ((isGroup && selectedConversation.is_group && conversationId === selectedConversation.id) ||
+                (!isGroup && !selectedConversation.is_group && conversationId === selectedConversation.id)) {
+                handleNewMessage(message);
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedConversation, on]);
 
     return (
         <>
@@ -56,7 +82,9 @@ function Home({ messages, selectedConversation }) {
 
                     {/* message input bar fixed below */}
                     <div className="shrink-0 border-t border-gray-200 dark:border-gray-700">
-                        <MessageInput conversation={selectedConversation} />
+                        <MessageInput 
+                            conversation={selectedConversation}
+                        />
                     </div>
                 </div>
             )}

@@ -4,7 +4,7 @@ import TextMessage from './TextMessage';
 import { Button } from 'flowbite-react';
 import axios from 'axios';
 
-const MessageInput = ({ conversation = null }) => {
+const MessageInput = ({ conversation = null}) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
@@ -41,12 +41,12 @@ const MessageInput = ({ conversation = null }) => {
       const response = await axios.post(route('message.store'), data, {
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
         }
       });
-
-      console.log("Message sent successfully:", response.data);
+      
+      // Clear the message input after successful send
       setMessage('');
+      
     } catch (err) {
       console.error("Failed to send message:", err);
       setError("Failed to send message. Please try again.");

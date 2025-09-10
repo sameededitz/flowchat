@@ -3,6 +3,7 @@ import React from 'react'
 import UserAvatar from './UserAvatar';
 import GroupAvatar from './GroupAvatar';
 import UserOptions from './UserOptions';
+import { formatMessageDateLong } from '@/Helpers/Date';
 
 const ConversationItem = ({ conversation, online, selectedConversation = null }) => {
   const page = usePage();
@@ -39,12 +40,7 @@ const ConversationItem = ({ conversation, online, selectedConversation = null })
           </h3>
           {conversation.last_message_date && (
             <span className='text-xs text-gray-500 dark:text-gray-400'>
-              {new Date(conversation.last_message_date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatMessageDateLong(conversation.last_message_date)}
             </span>
           )}
         </div>
@@ -54,7 +50,7 @@ const ConversationItem = ({ conversation, online, selectedConversation = null })
           </p>
         )}
       </div>
-      {user.is_admin && conversation.is_user && (
+      {Boolean(user.is_admin) && conversation.is_user && (
         <UserOptions conversation={conversation} />
       )}
     </div>

@@ -1,13 +1,17 @@
 import ConversationItem from '@/Components/Chat/ConversationItem';
 import Iconify from '@/Components/Iconify';
 import TextInput from '@/Components/TextInput';
+import MessageListener from '@/Components/MessageListener';
 import { Link, usePage } from '@inertiajs/react'
-import { Dropdown, DropdownDivider, DropdownHeader, DropdownItem, Tooltip } from "flowbite-react";
+import { Dropdown, DropdownDivider, DropdownItem, Tooltip } from "flowbite-react";
 import React, { useEffect, useState } from 'react'
+import { useEventBus } from '@/EventBus';
 
 const ChatLayout = ({ children }) => {
     const page = usePage();
+    const { on } = useEventBus();
 
+    const user = page.props.auth.user;
     const conversations = page.props.conversations;
     const selectedConversation = page.props.selectedConversation;
     const [localConversations, setLocalConversations] = useState(null);
@@ -28,7 +32,7 @@ const ChatLayout = ({ children }) => {
 
     useEffect(() => {
         setSortedConversations(
-            localConversations?.sort((a, b) => {
+            localConversations ? [...localConversations].sort((a, b) => {
                 if (a.blocked_at && b.blocked_at) {
                     return a.blocked_at > b.blocked_at ? 1 : -1;
                 } else if (a.blocked_at) {
@@ -46,7 +50,7 @@ const ChatLayout = ({ children }) => {
                 } else {
                     return 0;
                 }
-            })
+            }) : []
         );
     }, [localConversations]);
 
@@ -78,8 +82,37 @@ const ChatLayout = ({ children }) => {
         }
     }, []);
 
+    // Listen for message events via EventBus
+    useEffect(() => {
+        const unsubscribe = on('message.received', ({ message, conversationId, isGroup }) => {
+            updateConversationWithNewMessage(conversationId, message, isGroup);
+        });
+
+        return unsubscribe;
+    }, [on]);
+
+    const updateConversationWithNewMessage = (conversationId, message, isGroup) => {
+        setLocalConversations(prevConversations => {
+            const updated = prevConversations.map(conv => {
+                if ((isGroup && conv.is_group && conv.id === conversationId) ||
+                    (!isGroup && !conv.is_group && conv.id === conversationId)) {
+                    return {
+                        ...conv,
+                        last_message: message.message,
+                        last_message_date: message.created_at
+                    };
+                }
+                return conv;
+            });
+            return updated;
+        });
+    };
+
     return (
         <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
+            {/* Global Message Listener */}
+            <MessageListener />
+            
             {/* Navbar */}
             <nav className="w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-3 py-3 lg:px-5 lg:pl-3">
@@ -92,7 +125,7 @@ const ChatLayout = ({ children }) => {
                                     alt="FlowBite Logo"
                                 />
                                 <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">
-                                    Flowbite
+                                    FlowChat
                                 </span>
                             </Link>
                         </div>
@@ -104,15 +137,22 @@ const ChatLayout = ({ children }) => {
                                         <img className="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg" alt="user photo" />
                                     </div>
                                 }>
-                                    <Dropdown.Item>
+                                    <DropdownItem>
                                         <Iconify icon="mdi:home" className="w-4 h-4 me-2" />
                                         Dashboard
-                                    </Dropdown.Item>
-                                    <Dropdown.Divider />
-                                    <Dropdown.Item>
-                                        <Iconify icon="mdi:settings" className="w-4 h-4 me-2" />
-                                        Logout
-                                    </Dropdown.Item>
+                                    </DropdownItem>
+                                    <DropdownDivider />
+                                    <DropdownItem>
+                                        <Link
+                                            href={route('logout')} 
+                                            method="post" 
+                                            as="button"
+                                            className="flex items-center w-full"
+                                        >
+                                            <Iconify icon="mdi:logout" className="w-4 h-4 me-2" />
+                                            Logout
+                                        </Link>
+                                    </DropdownItem>
                                 </Dropdown>
                             </div>
                         </div>
@@ -138,8 +178,8 @@ const ChatLayout = ({ children }) => {
                         <TextInput onKeyUp={handleSearch} placeholder="Search conversations..." className="w-full" />
                     </div>
                     <div className="flex-1 overflow-y-auto px-1">
-                        {localConversations?.length > 0 ? (
-                            localConversations.map((conversation) => (
+                        {sortedConversations?.length > 0 ? (
+                            sortedConversations.map((conversation) => (
                                 <ConversationItem
                                     key={`${conversation.is_group ? "group_" + conversation.id : "user_" + conversation.id}`}
                                     conversation={conversation}
