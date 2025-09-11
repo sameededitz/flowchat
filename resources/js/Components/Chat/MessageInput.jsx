@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Iconify from '../Iconify';
 import TextMessage from './TextMessage';
-import { Button } from 'flowbite-react';
+import { Button, Popover } from 'flowbite-react';
 import axios from 'axios';
+import EmojiPicker from 'emoji-picker-react';
 
-const MessageInput = ({ conversation = null}) => {
+const MessageInput = ({ conversation = null }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
@@ -43,10 +44,10 @@ const MessageInput = ({ conversation = null}) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         }
       });
-      
+
       // Clear the message input after successful send
       setMessage('');
-      
+
     } catch (err) {
       console.error("Failed to send message:", err);
       setError("Failed to send message. Please try again.");
@@ -60,6 +61,25 @@ const MessageInput = ({ conversation = null}) => {
       setError(null);
     }
   }, [message]);
+
+  const onEmojiClick = (emojiObject) => {
+    setMessage(prevMessage => prevMessage + emojiObject.emoji);
+  };
+
+  // Detect current theme from HTML element
+  const getCurrentTheme = () => {
+    const html = document.documentElement;
+    // Check for common dark mode class names
+    if (html.classList.contains('dark')) return 'dark';
+    if (html.classList.contains('theme-dark')) return 'dark';
+    if (html.getAttribute('data-theme') === 'dark') return 'dark';
+    if (html.getAttribute('data-bs-theme') === 'dark') return 'dark';
+    
+    // Check for system preference as fallback
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    
+    return 'light';
+  };
 
   return (
     <div className='flex flex-wrap items-start border-t border-gray-200 dark:border-gray-700 py-1'>
@@ -86,7 +106,7 @@ const MessageInput = ({ conversation = null}) => {
             }}
             onSend={onSendClick}
           />
-          <Button size='sm' onClickCapture={onSendClick} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
+          <Button size='sm' onClickCapture={onSendClick} disabled={isSending} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
             {isSending ? (
               <>
                 <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
@@ -110,9 +130,30 @@ const MessageInput = ({ conversation = null}) => {
         <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
           <Iconify icon='ic:round-mic' className='w-6' />
         </button>
-        <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
-          <Iconify icon='ic:round-mood' className='w-6' />
-        </button>
+
+        {/* Emoji Picker with Flowbite Popover */}
+        <Popover
+          trigger="click"
+          placement="top"
+          content={
+            <div className="w-80 max-w-sm">
+              <EmojiPicker
+                onEmojiClick={onEmojiClick}
+                theme={getCurrentTheme()}
+                width="100%"
+                height={400}
+                previewConfig={{
+                  showPreview: false
+                }}
+                searchDisabled={false}
+              />
+            </div>
+          }
+        >
+          <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
+            <Iconify icon='ic:round-mood' className='w-6' />
+          </button>
+        </Popover>
       </div>
     </div>
   )

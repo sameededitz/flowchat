@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\SocketMessage;
 use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Group;
 use App\Models\Message;
 use Illuminate\Support\Str;
+use App\Models\Conversation;
+use App\Events\SocketMessage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\MessageRequest;
 use App\Http\Resources\MessageResource;
-use App\Models\Conversation;
 
 class MessageController extends Controller
 {
@@ -23,47 +24,56 @@ class MessageController extends Controller
                 $query->where('sender_id', $user->id)
                     ->where('receiver_id', Auth::id());
             })
+            ->with(['sender', 'receiver', 'attachments'])
             ->latest()
             ->paginate(10);
 
+        // dd(MessageResource::collection($messages));
+
         return Inertia::render('Home', [
             'selectedConversation' => $user->toConversationArray(),
-            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments']))->response()->getData(),
+            'messages' => MessageResource::collection($messages)->response()->getData(),
         ]);
     }
 
     public function byGroup(Group $group)
     {
         $messages = Message::where('group_id', $group->id)
+            ->with(['sender', 'receiver', 'attachments'])
             ->latest()
             ->paginate(50);
 
         return Inertia::render('Home', [
             'selectedConversation' => $group->toConversationArray(),
-            'messages' => MessageResource::collection($messages->load(['sender', 'receiver', 'attachments'])),
+            'messages' => MessageResource::collection($messages)->response()->getData(),
         ]);
     }
-
+    
     public function older(Message $message)
     {
         if ($message->group_id) {
             $messages = Message::where('group_id', $message->group_id)
                 ->where('created_at', '<', $message->created_at)
-                ->latest()
+                ->with(['sender', 'receiver', 'attachments'])
+                ->orderBy('created_at', 'desc')
                 ->paginate(10);
         } else {
-            $messages = Message::where(function ($query) use ($message) {
-                $query->where('sender_id', $message->sender_id)
-                    ->where('receiver_id', $message->receiver_id);
-            })->orWhere(function ($query) use ($message) {
-                $query->where('sender_id', $message->receiver_id)
-                    ->where('receiver_id', $message->sender_id);
-            })->where('created_at', '<', $message->created_at)
-                ->latest()
+            $messages = Message::where('created_at', '<', $message->created_at)
+                ->where(function ($query) use ($message) {
+                    $query->where(function ($q) use ($message) {
+                        $q->where('sender_id', $message->sender_id)
+                            ->where('receiver_id', $message->receiver_id);
+                    })->orWhere(function ($q) use ($message) {
+                        $q->where('sender_id', $message->receiver_id)
+                            ->where('receiver_id', $message->sender_id);
+                    });
+                })
+                ->with(['sender', 'receiver', 'attachments'])
+                ->orderBy('created_at', 'desc')
                 ->paginate(10);
         }
 
-        return MessageResource::collection($messages->load(['sender', 'receiver', 'attachments']));
+        return MessageResource::collection($messages)->response()->getData();
     }
 
     public function store(MessageRequest $request)

@@ -1,4 +1,5 @@
 @import "flowbite/src/themes/default";
+@import "highlight.js/styles/atom-one-light.css";
 
 @tailwind base;
 @tailwind components;
@@ -18,4 +19,134 @@ body,
 #app {
     height: 100%;
     margin: 0;
+}
+
+.messages-container {
+    scroll-behavior: smooth;
+}
+
+/* If you want to disable smooth scrolling during programmatic scroll adjustments */
+.messages-container.disable-smooth-scroll {
+    scroll-behavior: auto;
+}
+
+/* Markdown styling for messages */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+    font-weight: bold;
+    margin: 0.5em 0 0.3em 0;
+}
+
+.message-content h1 { font-size: 1.2em; }
+.message-content h2 { font-size: 1.1em; }
+.message-content h3 { font-size: 1em; }
+
+.message-content ul,
+.message-content ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+.message-content ul {
+    list-style-type: disc;
+}
+
+.message-content ol {
+    list-style-type: decimal;
+}
+
+.message-content li {
+    margin: 0.2em 0;
+}
+
+.message-content blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1em;
+    margin: 0.5em 0;
+    font-style: italic;
+}
+
+.dark .message-content blockquote {
+    border-left-color: #4b5563;
+}
+
+.message-content a {
+    color: #3b82f6;
+    text-decoration: underline;
+}
+
+.dark .message-content a {
+    color: #60a5fa;
+}
+
+/* Table styling */
+.message-content table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+    white-space: nowrap;
+}
+
+.message-content table tbody,
+.message-content table thead {
+    display: table;
+    width: 100%;
+}
+
+.message-content table th,
+.message-content table td {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* Custom syntax highlighting colors */
+.message-content pre {
+    background: #2d3748 !important; /* Dark gray background */
+}
+
+.message-content pre code {
+    background: transparent !important;
+    color: #e2e8f0 !important; /* Light text */
+}
+
+/* Override highlight.js colors for a more neutral theme */
+.message-content .hljs-keyword {
+    color: #81c784 !important; /* Green for keywords */
+}
+
+.message-content .hljs-string {
+    color: #ffb74d !important; /* Orange for strings */
+}
+
+.message-content .hljs-function {
+    color: #64b5f6 !important; /* Blue for functions */
+}
+
+.message-content .hljs-comment {
+    color: #90a4ae !important; /* Gray for comments */
+}
+
+.message-content .hljs-number {
+    color: #f06292 !important; /* Pink for numbers */
+}
+
+/* Copy button animations */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out;
 }

@@ -145,8 +145,7 @@ const ChatLayout = ({ children }) => {
                                     <DropdownItem>
                                         <Link
                                             href={route('logout')} 
-                                            method="post" 
-                                            as="button"
+                                            method="post"
                                             className="flex items-center w-full"
                                         >
                                             <Iconify icon="mdi:logout" className="w-4 h-4 me-2" />
