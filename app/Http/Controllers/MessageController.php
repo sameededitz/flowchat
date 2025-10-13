@@ -48,7 +48,7 @@ class MessageController extends Controller
             'messages' => MessageResource::collection($messages)->response()->getData(),
         ]);
     }
-    
+
     public function older(Message $message)
     {
         if ($message->group_id) {
@@ -83,55 +83,76 @@ class MessageController extends Controller
 
         $receiverId = $data['receiver_id'] ?? null;
         $groupId = $data['group_id'] ?? null;
-        $files = $data['files'] ?? [];
+        $files = $data['attachments'] ?? [];
 
-        $message = Message::create($data);
+        try {
+            $message = Message::create($data);
 
-        $attachments = [];
-        if (!empty($files)) {
-            // Create a unique folder for this message
-            $folder = Str::random(32); // e.g. abc123xyz...
-            $directory = $folder;
+            $attachments = [];
+            if (!empty($files)) {
+                // Create a unique folder for this message
+                $folder = Str::random(32); // e.g. abc123xyz...
+                $directory = $folder;
 
-            foreach ($files as $file) {
-                // Unique filename with original extension
-                $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
+                foreach ($files as $file) {
+                    // Unique filename with original extension
+                    $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
 
-                // Store file in the attachments disk
-                $storedPath = $file->storeAs($directory, $filename, 'attachments');
+                    // Store file in the attachments disk
+                    $storedPath = $file->storeAs($directory, $filename, 'attachments');
 
-                $attachment = $message->attachments()->create([
-                    'name' => $file->getClientOriginalName(), // original file name for display
-                    'mime' => $file->getClientMimeType(),
-                    'size' => $file->getSize(),
-                    'path' => $storedPath, // relative to disk root
-                ]);
+                    // Determine file type based on mime type
+                    $mimeType = $file->getClientMimeType();
+                    $fileType = 'document'; // default
 
-                $attachments[] = $attachment;
+                    if (strpos($mimeType, 'image/') === 0) {
+                        $fileType = 'image';
+                    } elseif (strpos($mimeType, 'video/') === 0) {
+                        $fileType = 'video';
+                    } elseif (strpos($mimeType, 'audio/') === 0) {
+                        $fileType = 'audio';
+                    }
+
+                    $attachment = $message->attachments()->create([
+                        'name' => $file->getClientOriginalName(), // original file name for display
+                        'mime' => $mimeType,
+                        'type' => $fileType, // Add the required type field
+                        'size' => $file->getSize(),
+                        'path' => $storedPath, // relative to disk root
+                        'uploaded_by' => Auth::id(), // Add uploader info
+                        'uploaded_at' => now(), // Add upload timestamp
+                    ]);
+
+                    $attachments[] = $attachment;
+                }
+
+                $message->attachments = $attachments;
             }
 
-            $message->attachments = $attachments;
+            if ($receiverId) {
+                Conversation::updateConversation(
+                    $receiverId,
+                    Auth::id(),
+                    $message
+                );
+            }
+
+            if ($groupId) {
+                Group::updateConversation(
+                    $groupId,
+                    $message
+                );
+            }
+
+            $message->load(['sender', 'receiver', 'attachments']);
+            SocketMessage::dispatch($message);
+
+            return new MessageResource($message);
+
+        } catch (\Exception $e) {
+            Log::error('Error storing message: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to send message'], 500);
         }
-
-        if ($receiverId) {
-            Conversation::updateConversation(
-                $receiverId,
-                Auth::id(),
-                $message
-            );
-        }
-
-        if ($groupId) {
-            Group::updateConversation(
-                $groupId,
-                $message
-            );
-        }
-
-        $message->load(['sender', 'receiver', 'attachments']);
-        SocketMessage::dispatch($message);
-
-        return new MessageResource($message);
     }
 
     public function destroy(Message $message)

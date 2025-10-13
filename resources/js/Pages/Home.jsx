@@ -189,7 +189,7 @@ function Home({ messages, selectedConversation }) {
                     {/* scrollable messages container */}
                     <div
                         ref={messagesCtrRef}
-                        className="flex-1 overflow-y-auto p-5 messages-container"
+                        className="flex-1 overflow-y-auto p-5 messages-container overflow-x-hidden"
                         onScroll={handleScroll}
                     >
                         {/* Loading indicator */}
