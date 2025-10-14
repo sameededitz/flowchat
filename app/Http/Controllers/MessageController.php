@@ -151,7 +151,7 @@ class MessageController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error storing message: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to send message'], 500);
+            return response()->json(['message' => 'Failed to send message'], 500);
         }
     }
 

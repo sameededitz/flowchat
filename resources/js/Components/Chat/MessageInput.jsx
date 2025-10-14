@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Iconify from '../Iconify';
 import TextMessage from './TextMessage';
-import { Button, Popover, Progress } from 'flowbite-react';
+import { Button, Popover, Progress, Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
 import axios from 'axios';
 import EmojiPicker from 'emoji-picker-react';
+import AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css';
 
 const MessageInput = ({ conversation = null }) => {
   const [message, setMessage] = useState('');
@@ -13,16 +15,32 @@ const MessageInput = ({ conversation = null }) => {
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
 
+  // Video modal state
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
 
-    const updatedFiles = [...selectedFiles].map(file => ({
-      file,
-      url: URL.createObjectURL(file),
-      id: Math.random().toString(36).substr(2, 9), // unique ID for each file
-      type: file.type.startsWith('image/') ? 'image' : 'file'
-    }));
-    
+    const updatedFiles = [...selectedFiles].map(file => {
+      let fileType = 'file'; // default
+
+      if (file.type.startsWith('image/')) {
+        fileType = 'image';
+      } else if (file.type.startsWith('video/')) {
+        fileType = 'video';
+      } else if (file.type.startsWith('audio/')) {
+        fileType = 'audio';
+      }
+
+      return {
+        file,
+        url: URL.createObjectURL(file),
+        id: Math.random().toString(36).substr(2, 9), // unique ID for each file
+        type: fileType
+      };
+    });
+
     setFiles((prevFiles) => [...prevFiles, ...updatedFiles]);
     e.target.value = '';
   };
@@ -35,6 +53,16 @@ const MessageInput = ({ conversation = null }) => {
       }
       return prevFiles.filter(f => f.id !== fileId);
     });
+  };
+
+  const openVideoModal = (video) => {
+    setSelectedVideo(video);
+    setShowVideoModal(true);
+  };
+
+  const closeVideoModal = () => {
+    setShowVideoModal(false);
+    setSelectedVideo(null);
   };
 
   const timeoutRef = useRef(null);
@@ -131,12 +159,51 @@ const MessageInput = ({ conversation = null }) => {
                 {fileObj.type === 'image' ? (
                   // Image Preview
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
-                    <img 
-                      src={fileObj.url} 
+                    <img
+                      src={fileObj.url}
                       alt={fileObj.file.name}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200"></div>
+                  </div>
+                ) : fileObj.type === 'video' ? (
+                  // Video Preview
+                  <div
+                    className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 bg-black cursor-pointer"
+                    onClick={() => openVideoModal(fileObj)}
+                  >
+                    <video
+                      src={fileObj.url}
+                      className="w-full h-full object-cover"
+                      muted
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Iconify icon="mdi:play-circle" className="w-8 h-8 text-white opacity-80" />
+                    </div>
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200"></div>
+                  </div>
+                ) : fileObj.type === 'audio' ? (
+                  // Audio Preview
+                  <div className="relative w-48 h-20 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-2">
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="w-full">
+                        <AudioPlayer
+                          src={fileObj.url}
+                          showJumpControls={false}
+                          showDownloadProgress={false}
+                          showFilledProgress={false}
+                          customAdditionalControls={[]}
+                          customVolumeControls={[]}
+                          layout="stacked-reverse"
+                          className="!bg-transparent !shadow-none"
+                          style={{
+                            backgroundColor: 'transparent',
+                            boxShadow: 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   // File Preview
@@ -147,7 +214,7 @@ const MessageInput = ({ conversation = null }) => {
                     </span>
                   </div>
                 )}
-                
+
                 {/* Remove Button */}
                 <button
                   onClick={() => removeFile(fileObj.id)}
@@ -156,7 +223,7 @@ const MessageInput = ({ conversation = null }) => {
                 >
                   <Iconify icon="mdi:close" className="w-4 h-4" />
                 </button>
-                
+
                 {/* File Name Tooltip */}
                 <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
                   {fileObj.file.name}
@@ -184,79 +251,120 @@ const MessageInput = ({ conversation = null }) => {
 
       {/* Input Area */}
       <div className='flex flex-wrap items-start py-1'>
-      <div className='order-2 flex-1 xs:flex-none xs:order-1 p-2'>
-        <button
-          className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'
-          disabled={isSending}
-        >
-          <Iconify icon='ic:round-attach-file' className='text-base' />
-          <input type="file" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
-        </button>
-        <button className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'>
-          <Iconify icon='ic:round-add-photo-alternate' className='text-lg' />
-          <input type="file" accept="image/*" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
-        </button>
-      </div>
-      <div className='flex-1 order-1 xs:order-2 px-3 xs:px-0 relative min-w-0 basis-full xs:basis-0 py-2'>
-        <div className='flex'>
-          <TextMessage
-            value={message}
-            onChange={(e) => {
-              setMessage(e.target.value);
-              setError("");
-            }}
-            onSend={onSendClick}
-          />
-          <Button size='sm' onClickCapture={onSendClick} disabled={isSending} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
-            {isSending ? (
-              <>
-                <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
-                <span className='hidden sm:inline'>Loading</span>
-              </>
-            ) : (
-              <>
-                <Iconify icon='ic:round-send' className='w-6' />
-                <span className='hidden sm:inline'>Send</span>
-              </>
-            )}
-          </Button>
-        </div>
-        {error && (
-          <div className='text-red-500 text-sm mt-1'>
-            {error}
-          </div>
-        )}
-      </div>
-      <div className='flex order-3 xs:order-3 p-2'>
-        <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
-          <Iconify icon='ic:round-mic' className='w-6' />
-        </button>
-
-        {/* Emoji Picker with Flowbite Popover */}
-        <Popover
-          trigger="click"
-          placement="top"
-          content={
-            <div className="w-80 max-w-[90vw] max-w-sm">
-              <EmojiPicker
-                onEmojiClick={onEmojiClick}
-                theme={getCurrentTheme()}
-                width="100%"
-                height={400}
-                previewConfig={{
-                  showPreview: false
-                }}
-                searchDisabled={false}
-              />
-            </div>
-          }
-        >
-          <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
-            <Iconify icon='ic:round-mood' className='w-6' />
+        <div className='order-2 flex-1 xs:flex-none xs:order-1 p-2'>
+          <button
+            className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'
+            disabled={isSending}
+          >
+            <Iconify icon='ic:round-attach-file' className='text-base' />
+            <input type="file" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
           </button>
-        </Popover>
+          <button className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'>
+            <Iconify icon='ic:round-add-photo-alternate' className='text-lg' />
+            <input type="file" accept="image/*" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
+          </button>
+        </div>
+        <div className='flex-1 order-1 xs:order-2 px-3 xs:px-0 relative min-w-0 basis-full xs:basis-0 py-2'>
+          <div className='flex'>
+            <TextMessage
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setError("");
+              }}
+              onSend={onSendClick}
+            />
+            <Button size='sm' onClickCapture={onSendClick} disabled={isSending} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
+              {isSending ? (
+                <>
+                  <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
+                  <span className='hidden sm:inline'>Loading</span>
+                </>
+              ) : (
+                <>
+                  <Iconify icon='ic:round-send' className='w-6' />
+                  <span className='hidden sm:inline'>Send</span>
+                </>
+              )}
+            </Button>
+          </div>
+          {error && (
+            <div className='text-red-500 text-sm mt-1'>
+              {error}
+            </div>
+          )}
+        </div>
+        <div className='flex order-3 xs:order-3 p-2'>
+          <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
+            <Iconify icon='ic:round-mic' className='w-6' />
+          </button>
+
+          {/* Emoji Picker with Flowbite Popover */}
+          <Popover
+            trigger="click"
+            placement="top"
+            content={
+              <div className="w-80 max-w-[90vw] max-w-sm">
+                <EmojiPicker
+                  onEmojiClick={onEmojiClick}
+                  theme={getCurrentTheme()}
+                  width="100%"
+                  height={400}
+                  previewConfig={{
+                    showPreview: false
+                  }}
+                  searchDisabled={false}
+                />
+              </div>
+            }
+          >
+            <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
+              <Iconify icon='ic:round-mood' className='w-6' />
+            </button>
+          </Popover>
+        </div>
       </div>
-    </div>
+
+      {/* Video Modal */}
+      <Modal show={showVideoModal} onClose={closeVideoModal} size="4xl">
+        <ModalHeader>
+          <div className="flex items-center gap-2">
+            <Iconify icon="mdi:video" className="w-5 h-5" />
+            <span>Video Preview</span>
+          </div>
+        </ModalHeader>
+        <ModalBody className="p-0">
+          {selectedVideo && (
+            <div className="relative bg-black rounded-lg overflow-hidden">
+              <video
+                src={selectedVideo.url}
+                controls
+                className="w-full h-auto max-h-[70vh]"
+                autoPlay={false}
+                preload="metadata"
+              />
+              <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                {selectedVideo.file.name}
+              </div>
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <div className="flex justify-between items-center w-full">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {selectedVideo && (
+                <>
+                  <span>Size: {(selectedVideo.file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                  <span className="ml-4">Type: {selectedVideo.file.type}</span>
+                </>
+              )}
+            </div>
+            <Button onClick={closeVideoModal} color="gray">
+              Close
+            </Button>
+          </div>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

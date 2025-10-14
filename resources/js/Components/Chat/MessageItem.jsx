@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 import UserAvatar from './UserAvatar';
+import MessageAttachments from './MessageAttachments';
 import { formatMessageDateLong } from '@/Helpers/Date';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -9,16 +10,14 @@ import rehypeHighlight from 'rehype-highlight';
 const MessageItem = ({ message }) => {
   const user = usePage().props.auth.user;
   const [copiedIndex, setCopiedIndex] = useState(null);
-  
+
   // Safety check for sender
   if (!message.sender) {
     console.warn('Message sender is undefined:', message);
     return null; // or return a loading/error state
   }
-  
-  const isSender = message.sender.id === user.id;
 
-  // Extract text content from React elements
+  const isSender = message.sender.id === user.id;  // Extract text content from React elements
   const extractTextContent = (element) => {
     if (typeof element === 'string') {
       return element;
@@ -55,16 +54,16 @@ const MessageItem = ({ message }) => {
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        
+
         // @ts-ignore - execCommand is deprecated but necessary for HTTP fallback
         const successful = document.execCommand('copy');
         document.body.removeChild(textArea);
-        
+
         if (!successful) {
           throw new Error('Copy operation failed');
         }
       }
-      
+
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
@@ -91,11 +90,10 @@ const MessageItem = ({ message }) => {
 
         {/* Message Bubble */}
         <div
-          className={`flex flex-col leading-1.5 p-4 border border-gray-200 dark:border-gray-600 w-full ${
-            isSender
+          className={`flex flex-col leading-1.5 p-4 border border-gray-200 dark:border-gray-600 w-full ${isSender
               ? 'bg-teal-100 dark:bg-teal-600 rounded-l-xl rounded-br-xl'
               : 'bg-gray-100 dark:bg-gray-700 rounded-r-xl rounded-bl-xl'
-          }`}
+            }`}
         >
           <div className="text-sm font-normal text-gray-900 dark:text-white break-words message-content">
             <Markdown
@@ -116,7 +114,7 @@ const MessageItem = ({ message }) => {
                   const codeText = extractTextContent(children);
                   const blockIndex = Math.random().toString(36).substr(2, 9);
                   const isCopied = copiedIndex === blockIndex;
-                  
+
                   return (
                     <div className="relative group">
                       <pre className="bg-gray-300 dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-3 rounded mt-2 mb-2 overflow-x-auto text-xs font-mono pr-12" {...props}>
@@ -124,11 +122,10 @@ const MessageItem = ({ message }) => {
                       </pre>
                       <button
                         onClick={() => copyCode(codeText, blockIndex)}
-                        className={`absolute top-2 right-2 p-1.5 rounded text-xs transition-all ${
-                          isCopied 
-                            ? 'bg-green-500 text-white' 
+                        className={`absolute top-2 right-2 p-1.5 rounded text-xs transition-all ${isCopied
+                            ? 'bg-green-500 text-white'
                             : 'bg-gray-600 hover:bg-gray-700 text-gray-200 opacity-0 group-hover:opacity-100'
-                        }`}
+                          }`}
                       >
                         {isCopied ? '✓' : '📋'}
                       </button>
@@ -179,14 +176,16 @@ const MessageItem = ({ message }) => {
             >
               {message.message}
             </Markdown>
+            
+            {/* Render attachments */}
+            <MessageAttachments attachments={message.attachments} />
           </div>
         </div>
 
         {/* Status */}
         <span
-          className={`text-sm font-normal capitalize text-gray-500 dark:text-gray-400 ${
-            isSender ? 'text-right' : ''
-          }`}
+          className={`text-sm font-normal capitalize text-gray-500 dark:text-gray-400 ${isSender ? 'text-right' : ''
+            }`}
         >
           {message.status}
         </span>

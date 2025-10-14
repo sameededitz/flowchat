@@ -15,6 +15,9 @@ class MessageAttachmentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // /** @var Illuminate\Filesystem\FilesystemAdapter */
+        $disk= Storage::disk('attachments');
+
         return [
             'id' => $this->id,
             'message_id' => $this->message_id,
@@ -22,7 +25,7 @@ class MessageAttachmentResource extends JsonResource
             'mime' => $this->mime, // MIME type of the file
             'type' => $this->type, // Type of the file (e.g., image, video, document)
             'size' => $this->size, // Size of the file
-            'url' => Storage::url($this->path), // URL to access the file
+            'url' => $disk->url($this->path), // URL to access the file
             'status' => $this->status, // Status of the attachment (e.g., uploaded, processing, failed)
             'is_deleted' => $this->is_deleted, // Indicates if the attachment is deleted
             'uploaded_at' => $this->uploaded_at, // Timestamp of when the file was uploaded
