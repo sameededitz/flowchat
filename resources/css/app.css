@@ -7,11 +7,12 @@
 
 /* Optional in your global CSS */
 ::-webkit-scrollbar {
-  width: 6px;
+    width: 6px;
 }
+
 ::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 3px;
+    background-color: #cbd5e1;
+    border-radius: 3px;
 }
 
 html,
@@ -19,12 +20,14 @@ body,
 #app {
     height: 100%;
     margin: 0;
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
 }
 
 /* Ensure all containers are responsive */
 * {
-    min-width: 0; /* Allow flex items to shrink */
+    min-width: 0;
+    /* Allow flex items to shrink */
 }
 
 .messages-container {
@@ -47,9 +50,17 @@ body,
     margin: 0.5em 0 0.3em 0;
 }
 
-.message-content h1 { font-size: 1.2em; }
-.message-content h2 { font-size: 1.1em; }
-.message-content h3 { font-size: 1em; }
+.message-content h1 {
+    font-size: 1.2em;
+}
+
+.message-content h2 {
+    font-size: 1.1em;
+}
+
+.message-content h3 {
+    font-size: 1em;
+}
 
 .message-content ul,
 .message-content ol {
@@ -112,33 +123,40 @@ body,
 
 /* Custom syntax highlighting colors */
 .message-content pre {
-    background: #2d3748 !important; /* Dark gray background */
+    background: #2d3748 !important;
+    /* Dark gray background */
 }
 
 .message-content pre code {
     background: transparent !important;
-    color: #e2e8f0 !important; /* Light text */
+    color: #e2e8f0 !important;
+    /* Light text */
 }
 
 /* Override highlight.js colors for a more neutral theme */
 .message-content .hljs-keyword {
-    color: #81c784 !important; /* Green for keywords */
+    color: #81c784 !important;
+    /* Green for keywords */
 }
 
 .message-content .hljs-string {
-    color: #ffb74d !important; /* Orange for strings */
+    color: #ffb74d !important;
+    /* Orange for strings */
 }
 
 .message-content .hljs-function {
-    color: #64b5f6 !important; /* Blue for functions */
+    color: #64b5f6 !important;
+    /* Blue for functions */
 }
 
 .message-content .hljs-comment {
-    color: #90a4ae !important; /* Gray for comments */
+    color: #90a4ae !important;
+    /* Gray for comments */
 }
 
 .message-content .hljs-number {
-    color: #f06292 !important; /* Pink for numbers */
+    color: #f06292 !important;
+    /* Pink for numbers */
 }
 
 /* Copy button animations */
@@ -147,6 +165,7 @@ body,
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -155,4 +174,18 @@ body,
 
 .animate-fade-in {
     animation: fade-in 0.3s ease-out;
+}
+
+/* Audio Player Dark mode text color fix */
+.dark .audio-player-custom .rhap_time,
+.dark .audio-player-custom .rhap_duration {
+    color: #d1d5db !important;
+}
+
+.dark .audio-player-custom .rhap_volume-button {
+    color: #9ca3af !important;
+}
+
+.audio-player-custom.upload-audio .rhap_controls-section{
+    margin: 0 !important;
 }

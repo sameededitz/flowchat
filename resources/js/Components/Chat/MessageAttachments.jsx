@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Modal, Button, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
 import Iconify from '../Iconify';
 import AudioPlayer from 'react-h5-audio-player';
+import VoiceMessage from './VoiceMessage';
 import 'react-h5-audio-player/lib/styles.css';
 
-const MessageAttachments = ({ attachments = [] }) => {
+const MessageAttachments = ({ attachments = [], isOwn = false }) => {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -12,7 +13,8 @@ const MessageAttachments = ({ attachments = [] }) => {
   // Group attachments by type
   const images = attachments.filter(att => att.type === 'image');
   const videos = attachments.filter(att => att.type === 'video');
-  const audios = attachments.filter(att => att.type === 'audio');
+  const audios = attachments.filter(att => att.type === 'audio' && !att.is_voice_message);
+  const voiceMessages = attachments.filter(att => att.is_voice_message);
   const documents = attachments.filter(att => att.type === 'document');
 
   // Combine images and videos for gallery
@@ -299,26 +301,31 @@ const MessageAttachments = ({ attachments = [] }) => {
     );
   };
 
+  // Render voice messages
+  const renderVoiceMessages = () => {
+    if (voiceMessages.length === 0) return null;
+
+    return (
+      <div className="mt-2 space-y-2">
+        {voiceMessages.map((voice) => (
+          <VoiceMessage 
+            key={voice.id} 
+            attachment={voice} 
+            isOwn={isOwn}
+          />
+        ))}
+      </div>
+    );
+  };
+
   // Don't render anything if no attachments
   if (attachments.length === 0) return null;
 
   return (
     <>
-      {/* Add custom CSS for audio player */}
-      <style>{`
-        /* Dark mode text color fix */
-        .dark .audio-player-custom .rhap_time,
-        .dark .audio-player-custom .rhap_duration {
-          color: #d1d5db !important;
-        }
-        
-        .dark .audio-player-custom .rhap_volume-button {
-          color: #9ca3af !important;
-        }
-      `}</style>
-
       {/* Render attachments */}
       {renderMediaGallery()}
+      {renderVoiceMessages()}
       {renderAudioAttachments()}
       {renderFileAttachments()}
 

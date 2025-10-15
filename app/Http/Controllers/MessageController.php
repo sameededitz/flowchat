@@ -84,6 +84,7 @@ class MessageController extends Controller
         $receiverId = $data['receiver_id'] ?? null;
         $groupId = $data['group_id'] ?? null;
         $files = $data['attachments'] ?? [];
+        $voiceMessages = $request->input('voice_messages', []);
 
         try {
             $message = Message::create($data);
@@ -94,12 +95,15 @@ class MessageController extends Controller
                 $folder = Str::random(32); // e.g. abc123xyz...
                 $directory = $folder;
 
-                foreach ($files as $file) {
+                foreach ($files as $index => $file) {
                     // Unique filename with original extension
                     $filename = Str::random(40) . '.' . $file->getClientOriginalExtension();
 
                     // Store file in the attachments disk
                     $storedPath = $file->storeAs($directory, $filename, 'attachments');
+
+                    // Check if this is a voice message
+                    $isVoiceMessage = isset($voiceMessages[$index]) && $voiceMessages[$index] === 'true';
 
                     // Determine file type based on mime type
                     $mimeType = $file->getClientMimeType();
@@ -121,6 +125,7 @@ class MessageController extends Controller
                         'path' => $storedPath, // relative to disk root
                         'uploaded_by' => Auth::id(), // Add uploader info
                         'uploaded_at' => now(), // Add upload timestamp
+                        'is_voice_message' => $isVoiceMessage, // Add voice message flag
                     ]);
 
                     $attachments[] = $attachment;

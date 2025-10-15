@@ -27,6 +27,7 @@ class MessageAttachmentResource extends JsonResource
             'size' => $this->size, // Size of the file
             'url' => $disk->url($this->path), // URL to access the file
             'status' => $this->status, // Status of the attachment (e.g., uploaded, processing, failed)
+            'is_voice_message' => $this->is_voice_message, // Indicates if this is a voice message
             'is_deleted' => $this->is_deleted, // Indicates if the attachment is deleted
             'uploaded_at' => $this->uploaded_at, // Timestamp of when the file was uploaded
             'uploader' => $this->whenLoaded('uploader', new UserResource($this->uploader)),

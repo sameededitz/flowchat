@@ -178,7 +178,7 @@ const MessageItem = ({ message }) => {
             </Markdown>
             
             {/* Render attachments */}
-            <MessageAttachments attachments={message.attachments} />
+            <MessageAttachments attachments={message.attachments} isOwn={isSender} />
           </div>
         </div>
 

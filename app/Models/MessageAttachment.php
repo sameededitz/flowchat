@@ -15,6 +15,7 @@ class MessageAttachment extends Model
         'size', // Size of the file
         'status', // Status of the attachment (e.g., uploaded, processing, failed)
         'is_deleted', // Indicates if the attachment is deleted
+        'is_voice_message', // Indicates if this is a voice message
         'uploaded_by', // User ID of the uploader
         'uploaded_at', // Timestamp of when the file was uploaded
         'processed_at', // Timestamp of when the file was processed
@@ -26,6 +27,7 @@ class MessageAttachment extends Model
     {
         return [
             'size' => 'integer',
+            'is_voice_message' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

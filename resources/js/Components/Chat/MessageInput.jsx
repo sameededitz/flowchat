@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Iconify from '../Iconify';
 import TextMessage from './TextMessage';
+import VoiceRecorder from './VoiceRecorder';
+import VoiceMessagePreview from './VoiceMessagePreview';
 import { Button, Popover, Progress, Modal, ModalHeader, ModalBody, ModalFooter } from 'flowbite-react';
 import axios from 'axios';
 import EmojiPicker from 'emoji-picker-react';
@@ -18,6 +20,8 @@ const MessageInput = ({ conversation = null }) => {
   // Video modal state
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
+
+  const timeoutRef = useRef(null);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -65,7 +69,16 @@ const MessageInput = ({ conversation = null }) => {
     setSelectedVideo(null);
   };
 
-  const timeoutRef = useRef(null);
+  const handleVoiceRecorded = (voiceMessage) => {
+    setFiles(prevFiles => [...prevFiles, voiceMessage]);
+  };
+
+  // Format time for voice message previews
+  const formatRecordingTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     return () => {
@@ -74,7 +87,7 @@ const MessageInput = ({ conversation = null }) => {
   }, []);
 
   const onSendClick = async () => {
-    if (isSending) return; // prevent double sends
+    if (isSending) return;
 
     if (!message.trim() && files.length === 0) {
       setError("Please enter a message or select a file before sending.");
@@ -85,8 +98,11 @@ const MessageInput = ({ conversation = null }) => {
     const data = new FormData();
 
     if (files.length > 0) {
-      files.forEach(({ file }, index) => {
+      files.forEach(({ file, isVoiceMessage }, index) => {
         data.append(`attachments[${index}]`, file);
+        if (isVoiceMessage) {
+          data.append(`voice_messages[${index}]`, 'true');
+        }
       });
     }
 
@@ -150,6 +166,7 @@ const MessageInput = ({ conversation = null }) => {
 
   return (
     <div className='border-t border-gray-200 dark:border-gray-700'>
+      
       {/* File Previews */}
       {files.length > 0 && (
         <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -183,9 +200,15 @@ const MessageInput = ({ conversation = null }) => {
                     </div>
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200"></div>
                   </div>
+                ) : fileObj.type === 'voice' ? (
+                  // Voice Message Preview
+                  <VoiceMessagePreview 
+                    fileObj={fileObj}
+                    onRemove={removeFile}
+                  />
                 ) : fileObj.type === 'audio' ? (
                   // Audio Preview
-                  <div className="relative w-48 h-20 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-2">
+                  <div className="relative w-64 h-20 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 p-2">
                     <div className="flex flex-col items-center justify-center h-full">
                       <div className="w-full">
                         <AudioPlayer
@@ -195,11 +218,13 @@ const MessageInput = ({ conversation = null }) => {
                           showFilledProgress={false}
                           customAdditionalControls={[]}
                           customVolumeControls={[]}
-                          layout="stacked-reverse"
-                          className="!bg-transparent !shadow-none"
+                          layout="horizontal-reverse"
+                          className="!bg-transparent !shadow-none !border-none audio-player-custom upload-audio"
                           style={{
                             backgroundColor: 'transparent',
                             boxShadow: 'none',
+                            padding: 0,
+                            fontSize: '0.875rem' // 14px
                           }}
                         />
                       </div>
@@ -215,19 +240,23 @@ const MessageInput = ({ conversation = null }) => {
                   </div>
                 )}
 
-                {/* Remove Button */}
-                <button
-                  onClick={() => removeFile(fileObj.id)}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
-                  title="Remove file"
-                >
-                  <Iconify icon="mdi:close" className="w-4 h-4" />
-                </button>
+                {/* Remove Button - Only for non-voice messages */}
+                {fileObj.type !== 'voice' && (
+                  <button
+                    onClick={() => removeFile(fileObj.id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                    title="Remove file"
+                  >
+                    <Iconify icon="mdi:close" className="w-4 h-4" />
+                  </button>
+                )}
 
-                {/* File Name Tooltip */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
-                  {fileObj.file.name}
-                </div>
+                {/* File Name Tooltip - Only for non-voice messages */}
+                {fileObj.type !== 'voice' && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                    {fileObj.file.name}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -295,16 +324,16 @@ const MessageInput = ({ conversation = null }) => {
           )}
         </div>
         <div className='flex order-3 xs:order-3 p-2'>
-          <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
-            <Iconify icon='ic:round-mic' className='w-6' />
-          </button>
+          <VoiceRecorder 
+            onVoiceRecorded={handleVoiceRecorded}
+            disabled={isSending}
+          />
 
-          {/* Emoji Picker with Flowbite Popover */}
           <Popover
             trigger="click"
             placement="top"
             content={
-              <div className="w-80 max-w-[90vw] max-w-sm">
+              <div className="w-80 max-w-[90vw]">
                 <EmojiPicker
                   onEmojiClick={onEmojiClick}
                   theme={getCurrentTheme()}
