@@ -3,10 +3,31 @@ import { usePage } from '@inertiajs/react';
 import { useEventBus } from '@/EventBus';
 
 const MessageListener = () => {
-    const { props } = usePage();
+    const { props, url } = usePage();
     const user = props.auth.user;
     const conversations = props.conversations;
     const { emit } = useEventBus();
+
+    // Check if user is currently in the chat for this message
+    const isCurrentlyInChat = (messageData) => {
+        const currentUrl = url;
+        
+        if (messageData.group_id) {
+            // Check if currently viewing this specific group chat
+            const groupPattern = `/group/${messageData.group_id}`;
+            return currentUrl === groupPattern || currentUrl.startsWith(groupPattern + '?');
+        } else if (messageData.sender?.id) {
+            // Check if currently viewing this specific user chat
+            const userPattern = `/user/${messageData.sender.id}`;
+            return currentUrl === userPattern || currentUrl.startsWith(userPattern + '?');
+        } else if (messageData.user?.id) {
+            // Fallback check with user field
+            const userPattern = `/user/${messageData.user.id}`;
+            return currentUrl === userPattern || currentUrl.startsWith(userPattern + '?');
+        }
+        
+        return false;
+    };
 
     useEffect(() => {
         if (!conversations || !user) return;
@@ -31,15 +52,20 @@ const MessageListener = () => {
                             isGroup: true
                         });
 
-                        // Emit notification if it's from another user
+                        // Emit notification if it's from another user AND not currently in this chat
                         if (messageData.sender_id !== user.id) {
-                            emit('newMessageNotification', {
+                            const notificationData = {
                                 user: messageData.sender,
                                 group_id: messageData.group_id,
                                 message: messageData.message?.length > 50
                                     ? messageData.message.substring(0, 47) + '...'
                                     : messageData.message || 'Shared a message'
-                            });
+                            };
+
+                            // Only emit notification if user is not currently in this chat
+                            if (!isCurrentlyInChat(notificationData)) {
+                                emit('newMessageNotification', notificationData);
+                            }
                         }
                     });
             } else {
@@ -55,14 +81,19 @@ const MessageListener = () => {
                             isGroup: false
                         });
 
-                        // Emit notification if it's from another user
+                        // Emit notification if it's from another user AND not currently in this chat
                         if (messageData.sender_id !== user.id) {
-                            emit('newMessageNotification', {
+                            const notificationData = {
                                 user: messageData.sender,
                                 message: messageData.message?.length > 50
                                     ? messageData.message.substring(0, 47) + '...'
                                     : messageData.message || 'Shared a message'
-                            });
+                            };
+
+                            // Only emit notification if user is not currently in this chat
+                            if (!isCurrentlyInChat(notificationData)) {
+                                emit('newMessageNotification', notificationData);
+                            }
                         }
                     });
             }
@@ -76,7 +107,7 @@ const MessageListener = () => {
                 Echo.leave(channelName);
             });
         };
-    }, [conversations, user, emit]);
+    }, [conversations, user, emit, url]); // Include url to re-evaluate when route changes
 
     // This component doesn't render anything
     return null;

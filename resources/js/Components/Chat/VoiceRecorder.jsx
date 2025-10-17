@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Iconify from '../Iconify';
+import { useToast } from '../../Hooks/useToast';
 
 // Global storage for recording state that survives component remounts
 let globalRecordingState = {
@@ -10,6 +11,8 @@ let globalRecordingState = {
 };
 
 const VoiceRecorder = ({ onVoiceRecorded, disabled = false }) => {
+  const toast = useToast();
+  
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -115,6 +118,9 @@ const VoiceRecorder = ({ onVoiceRecorded, disabled = false }) => {
         // Call parent callback with voice message
         onVoiceRecorded(voiceMessage);
         
+        // Show success toast
+        toast.voiceSent();
+        
         // Clean up and reset states
         stream.getTracks().forEach(track => track.stop());
         setAudioStream(null);
@@ -135,6 +141,9 @@ const VoiceRecorder = ({ onVoiceRecorded, disabled = false }) => {
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimeRef.current = 0;
+      
+      // Show recording toast
+      toast.voiceRecording();
       
       // Update global state
       globalRecordingState.isRecording = true;
@@ -163,6 +172,7 @@ const VoiceRecorder = ({ onVoiceRecorded, disabled = false }) => {
     } catch (error) {
       console.error('Error starting recording:', error);
       setError('Unable to access microphone. Please check permissions.');
+      toast.error('Unable to access microphone. Please check permissions.');
       timeoutRef.current = setTimeout(() => setError(null), 3000);
     }
   };
@@ -297,13 +307,6 @@ const VoiceRecorder = ({ onVoiceRecorded, disabled = false }) => {
           >
             <Iconify icon='mdi:stop' className='w-6' />
           </button>
-        </div>
-      )}
-
-      {/* Error display */}
-      {error && (
-        <div className="fixed top-4 left-4 z-50 p-2 bg-red-100 dark:bg-red-900/20 text-xs text-red-800 dark:text-red-200 rounded-lg shadow-lg">
-          {error}
         </div>
       )}
     </>

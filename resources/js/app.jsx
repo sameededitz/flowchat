@@ -7,6 +7,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { EventBusProvider } from './EventBus';
+import ToastContainer from './Components/Toast/ToastContainer';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -23,6 +24,7 @@ createInertiaApp({
         root.render(
             <EventBusProvider>
                 <App {...props} />
+                <ToastContainer />
             </EventBusProvider>
         );
     },

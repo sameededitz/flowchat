@@ -8,8 +8,11 @@ import axios from 'axios';
 import EmojiPicker from 'emoji-picker-react';
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
+import { useToast } from '../../Hooks/useToast';
 
 const MessageInput = ({ conversation = null }) => {
+  const toast = useToast();
+  
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
@@ -46,6 +49,14 @@ const MessageInput = ({ conversation = null }) => {
     });
 
     setFiles((prevFiles) => [...prevFiles, ...updatedFiles]);
+    
+    // Show toast for file uploads
+    if (updatedFiles.length === 1) {
+      toast.info(`${updatedFiles[0].file.name} selected for upload`);
+    } else if (updatedFiles.length > 1) {
+      toast.info(`${updatedFiles.length} files selected for upload`);
+    }
+    
     e.target.value = '';
   };
 
@@ -91,6 +102,7 @@ const MessageInput = ({ conversation = null }) => {
 
     if (!message.trim() && files.length === 0) {
       setError("Please enter a message or select a file before sending.");
+      toast.warning("Please enter a message or select a file before sending.");
       timeoutRef.current = setTimeout(() => setError(null), 3000);
       return;
     }
@@ -129,10 +141,14 @@ const MessageInput = ({ conversation = null }) => {
       // Clean up file URLs
       files.forEach(({ url }) => URL.revokeObjectURL(url));
       setFiles([]);
+      
+      // Show success toast
+      toast.success('Message sent successfully!');
 
     } catch (err) {
       console.error("Failed to send message:", err);
       setError(err.response?.data?.message || "Failed to send message. Please try again.");
+      toast.error(err.response?.data?.message || "Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
       setProgress(0);
