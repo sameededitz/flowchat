@@ -2,12 +2,13 @@ import { usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 import UserAvatar from './UserAvatar';
 import MessageAttachments from './MessageAttachments';
+import MessageActions from './MessageActions';
 import { formatMessageDateLong } from '@/Helpers/Date';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 
-const MessageItem = ({ message }) => {
+const MessageItem = ({ message, onEditMessage }) => {
   const user = usePage().props.auth.user;
   const [copiedIndex, setCopiedIndex] = useState(null);
 
@@ -74,11 +75,11 @@ const MessageItem = ({ message }) => {
   };
 
   return (
-    <div className={`flex items-start gap-2.5 mb-4 ${isSender ? 'flex-row-reverse' : ''}`}>
+    <div className={`group flex items-start gap-2.5 mb-4 ${isSender ? 'flex-row-reverse' : ''}`}>
       <UserAvatar user={message.sender} />
 
       <div className={`flex flex-col gap-1 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl ${isSender ? 'items-end' : 'items-start'}`}>
-        {/* Name + Time */}
+        {/* Name + Time + Actions */}
         <div className={`flex items-center ${isSender ? 'flex-row-reverse gap-2' : 'gap-2'}`}>
           <span className="text-sm font-semibold text-gray-900 dark:text-white">
             {isSender ? 'You' : message.sender.name}
@@ -86,6 +87,11 @@ const MessageItem = ({ message }) => {
           <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
             {formatMessageDateLong(message.created_at)}
           </span>
+          <MessageActions 
+            message={message} 
+            isOwn={isSender}
+            onEdit={onEditMessage}
+          />
         </div>
 
         {/* Message Bubble */}

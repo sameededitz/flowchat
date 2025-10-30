@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/group/{group}', [MessageController::class, 'byGroup'])->name('chat.group');
 
     Route::post('/message', [MessageController::class, 'store'])->name('message.store');
+    Route::patch('/message/{message}', [MessageController::class, 'update'])->name('message.update');
     Route::delete('/message/{message}', [MessageController::class, 'destroy'])->name('message.destroy');
 
     Route::get('/message/older/{message}', [MessageController::class, 'older'])->name('message.load.older');

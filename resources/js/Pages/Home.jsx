@@ -11,6 +11,7 @@ function Home({ messages, selectedConversation }) {
     const [localMessages, setLocalMessages] = useState([])
     const [isLoadingOlder, setIsLoadingOlder] = useState(false)
     const [hasMoreMessages, setHasMoreMessages] = useState(true)
+    const [editingMessage, setEditingMessage] = useState(null)
     const { on } = useEventBus()
 
     const messagesCtrRef = useRef(null);
@@ -171,6 +172,50 @@ function Home({ messages, selectedConversation }) {
         return unsubscribe;
     }, [selectedConversation, on]);
 
+    // Handle message updates (edit)
+    const handleMessageUpdate = (updatedMessage) => {
+        setLocalMessages(prevMessages =>
+            prevMessages.map(msg =>
+                msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg
+            )
+        );
+    };
+
+    // Handle message deletions
+    const handleMessageDelete = (messageId) => {
+        setLocalMessages(prevMessages =>
+            prevMessages.filter(msg => msg.id !== messageId)
+        );
+    };
+
+    // Listen for message updates
+    useEffect(() => {
+        if (!selectedConversation) return;
+
+        const unsubscribe = on('message.updated', ({ message, conversationId, isGroup }) => {
+            if ((isGroup && selectedConversation.is_group && conversationId === selectedConversation.id) ||
+                (!isGroup && !selectedConversation.is_group && conversationId === selectedConversation.id)) {
+                handleMessageUpdate(message);
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedConversation, on]);
+
+    // Listen for message deletions
+    useEffect(() => {
+        if (!selectedConversation) return;
+
+        const unsubscribe = on('message.deleted', ({ messageId, conversationId, isGroup }) => {
+            if ((isGroup && selectedConversation.is_group && conversationId === selectedConversation.id) ||
+                (!isGroup && !selectedConversation.is_group && conversationId === selectedConversation.id)) {
+                handleMessageDelete(messageId);
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedConversation, on]);
+
     return (
         <>
             {!messages && (
@@ -214,7 +259,11 @@ function Home({ messages, selectedConversation }) {
                         {/* Messages */}
                         {localMessages.length > 0 ? (
                             localMessages.map((message) => (
-                                <MessageItem key={message.id} message={message} />
+                                <MessageItem 
+                                    key={message.id} 
+                                    message={message}
+                                    onEditMessage={(msg) => setEditingMessage(msg)}
+                                />
                             ))
                         ) : (
                             <div className="text-center text-gray-500">No messages yet.</div>
@@ -225,6 +274,8 @@ function Home({ messages, selectedConversation }) {
                     <div className="shrink-0 border-t border-gray-200 dark:border-gray-700">
                         <MessageInput
                             conversation={selectedConversation}
+                            editingMessage={editingMessage}
+                            onCancelEdit={() => setEditingMessage(null)}
                         />
                     </div>
                 </div>

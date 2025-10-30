@@ -10,7 +10,7 @@ import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { useToast } from '../../Hooks/useToast';
 
-const MessageInput = ({ conversation = null }) => {
+const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit = null }) => {
   const toast = useToast();
   
   const [message, setMessage] = useState('');
@@ -84,12 +84,13 @@ const MessageInput = ({ conversation = null }) => {
     setFiles(prevFiles => [...prevFiles, voiceMessage]);
   };
 
-  // Format time for voice message previews
-  const formatRecordingTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  // Populate message input when editing
+  useEffect(() => {
+    if (editingMessage) {
+      setMessage(editingMessage.message || '');
+    }
+  }, [editingMessage]);
+
 
   useEffect(() => {
     return () => {
@@ -100,6 +101,46 @@ const MessageInput = ({ conversation = null }) => {
   const onSendClick = async () => {
     if (isSending) return;
 
+    // Check if we're editing
+    if (editingMessage) {
+      // For editing, we only update the message text (no attachments for now)
+      if (!message.trim()) {
+        setError("Please enter a message.");
+        toast.warning("Please enter a message.");
+        timeoutRef.current = setTimeout(() => setError(null), 3000);
+        return;
+      }
+
+      setIsSending(true);
+      setError(null);
+
+      try {
+        await axios.patch(route('message.update', editingMessage.id), {
+          message: message.trim()
+        });
+
+        setMessage('');
+        onCancelEdit?.();
+        toast.success('Message updated successfully!');
+      } catch (err) {
+        console.error("Failed to update message:", err);
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Failed to update message. Please try again.";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        
+        // If it's a time limit error, cancel the edit mode
+        if (err.response?.status === 422 && errorMessage.includes('15 minutes')) {
+          setTimeout(() => {
+            onCancelEdit?.();
+          }, 2000);
+        }
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // Regular message send
     if (!message.trim() && files.length === 0) {
       setError("Please enter a message or select a file before sending.");
       toast.warning("Please enter a message or select a file before sending.");
@@ -310,6 +351,27 @@ const MessageInput = ({ conversation = null }) => {
           </button>
         </div>
         <div className='flex-1 order-1 xs:order-2 px-3 xs:px-0 relative min-w-0 basis-full xs:basis-0 py-2'>
+          {/* Edit mode indicator */}
+          {editingMessage && (
+            <div className='flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 px-3 py-2 mb-2 rounded'>
+              <div className='flex items-center gap-2'>
+                <Iconify icon='mdi:pencil' className='text-blue-600 dark:text-blue-400' />
+                <span className='text-sm text-blue-600 dark:text-blue-400 font-medium'>
+                  Editing message
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setMessage('');
+                  onCancelEdit?.();
+                }}
+                className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              >
+                <Iconify icon='mdi:close' className='text-lg' />
+              </button>
+            </div>
+          )}
+          
           <div className='flex'>
             <TextMessage
               value={message}
@@ -324,6 +386,11 @@ const MessageInput = ({ conversation = null }) => {
                 <>
                   <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
                   <span className='hidden sm:inline'>Loading</span>
+                </>
+              ) : editingMessage ? (
+                <>
+                  <Iconify icon='mdi:check' className='w-6' />
+                  <span className='hidden sm:inline'>Update</span>
                 </>
               ) : (
                 <>

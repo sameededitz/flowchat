@@ -44,27 +44,43 @@ const MessageListener = () => {
                 channel = Echo.private(channelName)
                     .listen('SocketMessage', (e) => {
                         const messageData = e.message?.data || e.message || e.data;
+                        const action = e.action || 'created';
                         
-                        // Emit events for different components to handle
-                        emit('message.received', {
-                            message: messageData,
-                            conversationId: conversation.id,
-                            isGroup: true
-                        });
+                        // Emit events based on action type
+                        if (action === 'deleted') {
+                            emit('message.deleted', {
+                                messageId: messageData.id,
+                                conversationId: conversation.id,
+                                isGroup: true
+                            });
+                        } else if (action === 'updated') {
+                            emit('message.updated', {
+                                message: messageData,
+                                conversationId: conversation.id,
+                                isGroup: true
+                            });
+                        } else {
+                            // created
+                            emit('message.received', {
+                                message: messageData,
+                                conversationId: conversation.id,
+                                isGroup: true
+                            });
 
-                        // Emit notification if it's from another user AND not currently in this chat
-                        if (messageData.sender_id !== user.id) {
-                            const notificationData = {
-                                user: messageData.sender,
-                                group_id: messageData.group_id,
-                                message: messageData.message?.length > 50
-                                    ? messageData.message.substring(0, 47) + '...'
-                                    : messageData.message || 'Shared a message'
-                            };
+                            // Emit notification if it's from another user AND not currently in this chat
+                            if (messageData.sender_id !== user.id) {
+                                const notificationData = {
+                                    user: messageData.sender,
+                                    group_id: messageData.group_id,
+                                    message: messageData.message?.length > 50
+                                        ? messageData.message.substring(0, 47) + '...'
+                                        : messageData.message || 'Shared a message'
+                                };
 
-                            // Only emit notification if user is not currently in this chat
-                            if (!isCurrentlyInChat(notificationData)) {
-                                emit('newMessageNotification', notificationData);
+                                // Only emit notification if user is not currently in this chat
+                                if (!isCurrentlyInChat(notificationData)) {
+                                    emit('newMessageNotification', notificationData);
+                                }
                             }
                         }
                     });
@@ -73,26 +89,42 @@ const MessageListener = () => {
                 channel = Echo.private(channelName)
                     .listen('SocketMessage', (e) => {
                         const messageData = e.message?.data || e.message || e.data;
+                        const action = e.action || 'created';
                         
-                        // Emit events for different components to handle
-                        emit('message.received', {
-                            message: messageData,
-                            conversationId: conversation.id,
-                            isGroup: false
-                        });
+                        // Emit events based on action type
+                        if (action === 'deleted') {
+                            emit('message.deleted', {
+                                messageId: messageData.id,
+                                conversationId: conversation.id,
+                                isGroup: false
+                            });
+                        } else if (action === 'updated') {
+                            emit('message.updated', {
+                                message: messageData,
+                                conversationId: conversation.id,
+                                isGroup: false
+                            });
+                        } else {
+                            // created
+                            emit('message.received', {
+                                message: messageData,
+                                conversationId: conversation.id,
+                                isGroup: false
+                            });
 
-                        // Emit notification if it's from another user AND not currently in this chat
-                        if (messageData.sender_id !== user.id) {
-                            const notificationData = {
-                                user: messageData.sender,
-                                message: messageData.message?.length > 50
-                                    ? messageData.message.substring(0, 47) + '...'
-                                    : messageData.message || 'Shared a message'
-                            };
+                            // Emit notification if it's from another user AND not currently in this chat
+                            if (messageData.sender_id !== user.id) {
+                                const notificationData = {
+                                    user: messageData.sender,
+                                    message: messageData.message?.length > 50
+                                        ? messageData.message.substring(0, 47) + '...'
+                                        : messageData.message || 'Shared a message'
+                                };
 
-                            // Only emit notification if user is not currently in this chat
-                            if (!isCurrentlyInChat(notificationData)) {
-                                emit('newMessageNotification', notificationData);
+                                // Only emit notification if user is not currently in this chat
+                                if (!isCurrentlyInChat(notificationData)) {
+                                    emit('newMessageNotification', notificationData);
+                                }
                             }
                         }
                     });

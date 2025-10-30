@@ -6,6 +6,7 @@ use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Group;
 use App\Models\Message;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Conversation;
 use App\Events\SocketMessage;
@@ -160,13 +161,65 @@ class MessageController extends Controller
         }
     }
 
+    public function update(Request $request, Message $message)
+    {
+        // Check authorization
+        if ($message->sender_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Check if message is older than 15 minutes
+        $fifteenMinutesAgo = now()->subMinutes(15);
+        if ($message->created_at < $fifteenMinutesAgo) {
+            return response()->json(['error' => 'Cannot edit messages older than 15 minutes'], 422);
+        }
+
+        // Validate the update request
+        $validated = $request->validate([
+            'message' => 'required|string|max:5000',
+        ]);
+
+        // Update the message
+        $message->update([
+            'message' => $validated['message'],
+        ]);
+
+        // Reload relationships
+        $message->load(['sender', 'receiver', 'attachments']);
+
+        // Broadcast the updated message
+        broadcast(new SocketMessage($message, 'updated'))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
+    }
+
     public function destroy(Message $message)
     {
         if ($message->sender_id !== Auth::id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Store the ID before deletion
+        $messageId = $message->id;
+        $groupId = $message->group_id;
+        $senderId = $message->sender_id;
+        $receiverId = $message->receiver_id;
+
         $message->delete();
+
+        // Create a minimal message object for broadcasting
+        $deletedMessage = new Message();
+        $deletedMessage->id = $messageId;
+        $deletedMessage->group_id = $groupId;
+        $deletedMessage->sender_id = $senderId;
+        $deletedMessage->receiver_id = $receiverId;
+        $deletedMessage->exists = true;
+
+        // Broadcast the deletion
+        broadcast(new SocketMessage($deletedMessage, 'deleted'))->toOthers();
 
         return response()->json(['success' => true]);
     }

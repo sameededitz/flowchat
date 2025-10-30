@@ -19,7 +19,7 @@ class SocketMessage implements ShouldBroadcastNow
     /**
      * Create a new event instance.
      */
-    public function __construct(public Message $message)
+    public function __construct(public Message $message, public string $action = 'created')
     {
         //
     }
@@ -50,6 +50,7 @@ class SocketMessage implements ShouldBroadcastNow
     {
         return [
             'message' => $this->message->toResource(),
+            'action' => $this->action,
         ];
     }
 }
