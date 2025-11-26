@@ -84,11 +84,40 @@ const ChatLayout = ({ children }) => {
 
     // Listen for message events via EventBus
     useEffect(() => {
-        const unsubscribe = on('message.received', ({ message, conversationId, isGroup }) => {
+        const unsubscribeReceived = on('message.received', ({ message, conversationId, isGroup }) => {
             updateConversationWithNewMessage(conversationId, message, isGroup);
         });
 
-        return unsubscribe;
+        const unsubscribeUpdated = on('message.updated', ({ message, conversationId, isGroup }) => {
+            updateConversationWithNewMessage(conversationId, message, isGroup);
+        });
+
+        const unsubscribeDeleted = on('message.deleted', ({ messageId, conversationId, isGroup, newLastMessage }) => {
+            if (newLastMessage) {
+                updateConversationWithNewMessage(conversationId, newLastMessage, isGroup);
+            } else {
+                // No messages left, clear the last message
+                setLocalConversations(prevConversations => {
+                    return prevConversations.map(conv => {
+                        if ((isGroup && conv.is_group && conv.id === conversationId) ||
+                            (!isGroup && !conv.is_group && conv.id === conversationId)) {
+                            return {
+                                ...conv,
+                                last_message: null,
+                                last_message_date: null
+                            };
+                        }
+                        return conv;
+                    });
+                });
+            }
+        });
+
+        return () => {
+            unsubscribeReceived();
+            unsubscribeUpdated();
+            unsubscribeDeleted();
+        };
     }, [on]);
 
     const updateConversationWithNewMessage = (conversationId, message, isGroup) => {

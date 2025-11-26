@@ -1,10 +1,14 @@
 import { Link } from '@inertiajs/react'
-import React from 'react'
+import React, { useState } from 'react'
 import Iconify from '../Iconify'
 import UserAvatar from './UserAvatar'
 import GroupAvatar from './GroupAvatar'
+import GroupInfoModal from './GroupInfoModal'
+import { Tooltip } from 'flowbite-react'
 
 const ConversationHeader = ({ selectedConversation }) => {
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
+
     return (
         <>
             {selectedConversation && (
@@ -29,7 +33,30 @@ const ConversationHeader = ({ selectedConversation }) => {
                             )}
                         </div>
                     </div>
+                    
+                    {/* Group Info Button */}
+                    {selectedConversation.is_group && (
+                        <div className="flex items-center">
+                            <Tooltip content="Group Info">
+                                <button
+                                    onClick={() => setShowGroupInfo(true)}
+                                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <Iconify icon="mdi:information" className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                                </button>
+                            </Tooltip>
+                        </div>
+                    )}
                 </div>
+            )}
+
+            {/* Group Info Modal */}
+            {selectedConversation?.is_group && (
+                <GroupInfoModal
+                    show={showGroupInfo}
+                    onClose={() => setShowGroupInfo(false)}
+                    group={selectedConversation}
+                />
             )}
         </>
     )

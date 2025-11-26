@@ -71,16 +71,8 @@ const MessageActions = ({ message, isOwn, onEdit }) => {
     }
 
     try {
-      await axios.delete(route('message.destroy', message.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success('Message deleted successfully');
-        },
-        onError: (errors) => {
-          console.error('Delete failed:', errors);
-          toast.error('Failed to delete message');
-        }
-      });
+      await axios.delete(route('message.destroy', message.id));
+      toast.success('Message deleted successfully');
       setIsOpen(false);
     } catch (err) {
       console.error('Delete failed:', err);

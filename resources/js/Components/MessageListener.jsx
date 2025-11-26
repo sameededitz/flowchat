@@ -51,7 +51,8 @@ const MessageListener = () => {
                             emit('message.deleted', {
                                 messageId: messageData.id,
                                 conversationId: conversation.id,
-                                isGroup: true
+                                isGroup: true,
+                                newLastMessage: e.newLastMessage
                             });
                         } else if (action === 'updated') {
                             emit('message.updated', {
@@ -96,7 +97,8 @@ const MessageListener = () => {
                             emit('message.deleted', {
                                 messageId: messageData.id,
                                 conversationId: conversation.id,
-                                isGroup: false
+                                isGroup: false,
+                                newLastMessage: e.newLastMessage
                             });
                         } else if (action === 'updated') {
                             emit('message.updated', {

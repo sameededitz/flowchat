@@ -202,13 +202,33 @@ class MessageController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Store the ID before deletion
+        // Store info before deletion
         $messageId = $message->id;
         $groupId = $message->group_id;
         $senderId = $message->sender_id;
         $receiverId = $message->receiver_id;
 
+        // Delete the message (observer will update last_message_id)
         $message->delete();
+
+        // Get the updated last message after deletion
+        $newLastMessage = null;
+        if ($groupId) {
+            $group = Group::find($groupId);
+            if ($group && $group->last_message_id) {
+                $newLastMessage = Message::with(['sender', 'receiver'])->find($group->last_message_id);
+            }
+        } else {
+            $conversation = Conversation::where(function ($query) use ($senderId, $receiverId) {
+                $query->where('user_id1', $senderId)->where('user_id2', $receiverId);
+            })->orWhere(function ($query) use ($senderId, $receiverId) {
+                $query->where('user_id1', $receiverId)->where('user_id2', $senderId);
+            })->first();
+            
+            if ($conversation && $conversation->last_message_id) {
+                $newLastMessage = Message::with(['sender', 'receiver'])->find($conversation->last_message_id);
+            }
+        }
 
         // Create a minimal message object for broadcasting
         $deletedMessage = new Message();
@@ -218,8 +238,8 @@ class MessageController extends Controller
         $deletedMessage->receiver_id = $receiverId;
         $deletedMessage->exists = true;
 
-        // Broadcast the deletion
-        broadcast(new SocketMessage($deletedMessage, 'deleted'))->toOthers();
+        // Broadcast the deletion with new last message info
+        broadcast(new SocketMessage($deletedMessage, 'deleted', $newLastMessage))->toOthers();
 
         return response()->json(['success' => true]);
     }

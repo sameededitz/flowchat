@@ -30,7 +30,9 @@ class Group extends Model
 
     public function members()
     {
-        return $this->belongsToMany(User::class, 'group_users')->withTimestamps();
+        return $this->belongsToMany(User::class, 'group_users')
+            ->withPivot('role', 'is_active', 'joined_at', 'invited_by')
+            ->withTimestamps();
     }
 
     public function messages()
@@ -45,9 +47,14 @@ class Group extends Model
             'messages.message as last_message',
             'messages.created_at as last_message_date',
         ])
-            ->join('group_users', 'group_users.group_id', '=', 'groups.id')
+            ->with(['owner', 'members'])
+            ->leftJoin('group_users', 'group_users.group_id', '=', 'groups.id')
             ->leftJoin('messages', 'messages.id', '=', 'groups.last_message_id')
-            ->where('group_users.user_id', $user->id)
+            ->where(function($q) use ($user) {
+                $q->where('group_users.user_id', $user->id)
+                  ->orWhere('groups.owner_id', $user->id);
+            })
+            ->groupBy('groups.id')
             ->orderBy('messages.created_at', 'desc')
             ->orderBy('groups.name');
 
@@ -63,6 +70,7 @@ class Group extends Model
             'slug' => $this->slug,
             'avatar' => $this->avatar,
             'owner_id' => $this->owner_id,
+            'owner' => $this->owner,
             'is_group' => true,
             'is_user' => false,
             'users' => $this->members,

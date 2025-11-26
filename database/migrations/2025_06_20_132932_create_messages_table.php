@@ -26,11 +26,11 @@ return new class extends Migration
         });
 
         Schema::table('groups', function (Blueprint $table) {
-            $table->foreignId('last_message_id')->nullable()->constrained('messages')->onDelete('cascade')->after('owner_id');
+            $table->foreignId('last_message_id')->nullable()->constrained('messages')->nullOnDelete()->after('owner_id');
         });
 
         Schema::table('conversations', function (Blueprint $table) {
-            $table->foreignId('last_message_id')->nullable()->constrained('messages')->onDelete('cascade')->after('group_id');
+            $table->foreignId('last_message_id')->nullable()->constrained('messages')->nullOnDelete()->after('group_id');
         });
     }
 

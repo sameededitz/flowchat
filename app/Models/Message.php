@@ -42,12 +42,7 @@ class Message extends Model
     {
         return $this->hasMany(MessageAttachment::class);
     }
-
-    /**
-     * Convert the message to a resource for WebSocket broadcasting
-     *
-     * @return array
-     */
+    
     public function toBroadcastResource()
     {
         $this->load(['sender', 'receiver', 'attachments']);

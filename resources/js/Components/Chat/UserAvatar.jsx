@@ -7,8 +7,8 @@ const UserAvatar = ({ user, online = null, profile = false }) => {
   const size = profile ? 'w-40' : 'w-8';
   return (
     <>
-      {user.avatar_url ? (
-        <Avatar rounded img={user.avatar_url} alt={user.name} status={onlineStatus} statusPosition="top-right" className={size} />
+      {user.avatar ? (
+        <Avatar rounded img={user.avatar} alt={user.name} status={onlineStatus} statusPosition="top-right" className={size} />
       ) : (
         <Avatar rounded alt={user.name} status={onlineStatus} statusPosition="top-right" placeholderInitials={user.name.substring(0,1)} className={size} />
       )}
