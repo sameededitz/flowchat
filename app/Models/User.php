@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Group::class, 'group_users');
     }
 
+    public function ownedGroups()
+    {
+        return $this->hasMany(Group::class, 'owner_id');
+    }
+
     public static function getUsers(User $user)
     {
         $userId = $user->id;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, ModalBody, ModalHeader } from 'flowbite-react';
 import Iconify from '../Iconify';
 import GroupAvatar from './GroupAvatar';
@@ -6,6 +6,7 @@ import UserAvatar from './UserAvatar';
 import { usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import { useToast } from '../../Hooks/useToast';
+import AvatarUpload from './AvatarUpload';
 
 const GroupInfoModal = ({ show, onClose, group }) => {
     const { auth } = usePage().props;
@@ -23,8 +24,11 @@ const GroupInfoModal = ({ show, onClose, group }) => {
     const [inviteModalOpen, setInviteModalOpen] = useState(false);
     const [groupData, setGroupData] = useState({
         name: group?.name || '',
-        description: group?.description || ''
+        description: group?.description || '',
+        avatar: group?.avatar || null
     });
+    const [avatarFiles, setAvatarFiles] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     if (!group) return null;
 
@@ -41,12 +45,54 @@ const GroupInfoModal = ({ show, onClose, group }) => {
 
     const handleEditGroup = async () => {
         try {
-            const response = await axios.patch(route('group.update', group.id), groupData);
+            setIsUploading(true);
+            const formData = new FormData();
+            formData.append('name', groupData.name);
+            formData.append('description', groupData.description || '');
+            
+            // Add avatar if there's a new file
+            if (avatarFiles.length > 0) {
+                console.log('Avatar files:', avatarFiles);
+                const fileItem = avatarFiles[0];
+                // FilePond stores the actual file in different ways depending on the state
+                const file = fileItem.file || fileItem.getFileEncodeDataURL?.() || fileItem;
+                console.log('File to upload:', file);
+                
+                if (file instanceof File || file instanceof Blob) {
+                    formData.append('avatar', file);
+                }
+            }
+            
+            const response = await axios.post(route('group.update', group.id), formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-HTTP-Method-Override': 'PATCH'
+                }
+            });
+            
             toast.success(response.data.message);
             setEditModalOpen(false);
+            setAvatarFiles([]);
             router.reload({ only: ['selectedConversation'] });
         } catch (error) {
             toast.error(error.response?.data?.error || 'Failed to update group');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleRemoveAvatar = async () => {
+        if (!confirm('Are you sure you want to remove the group avatar?')) {
+            return;
+        }
+        
+        try {
+            const response = await axios.delete(route('group.avatar.remove', group.id));
+            toast.success(response.data.message);
+            setGroupData({ ...groupData, avatar: null });
+            router.reload({ only: ['selectedConversation'] });
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to remove avatar');
         }
     };
 
@@ -100,11 +146,25 @@ const GroupInfoModal = ({ show, onClose, group }) => {
         }
     };
 
+    const handleTransferOwnership = async (userId, userName) => {
+        if (!confirm(`Are you sure you want to transfer ownership of "${group.name}" to ${userName}? You will become a regular admin and this action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await axios.post(route('group.transfer-ownership', { group: group.id, user: userId }));
+            toast.success(response.data.message);
+            router.reload({ only: ['selectedConversation'] });
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to transfer ownership');
+        }
+    };
+
     return (
         <Modal show={show} onClose={onClose} size="lg">
             <ModalHeader>
                 <div className="flex items-center gap-3">
-                    <GroupAvatar />
+                    <GroupAvatar group={group} />
                     <span>Group Info</span>
                 </div>
             </ModalHeader>
@@ -113,7 +173,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                     {/* Group Profile Section */}
                     <div className="flex flex-col items-center text-center pb-6 border-b border-gray-200 dark:border-gray-700">
                         <div className="mb-4">
-                            <GroupAvatar size="xl" />
+                            <GroupAvatar group={group} size="xl" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                             {group.name}
@@ -283,20 +343,51 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                         <Iconify icon="mdi:dots-vertical" className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                                                     </button>
                                                     <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                                                        <button 
-                                                            onClick={() => handleChangeRole(user.id, 'admin')}
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                                        >
-                                                            <Iconify icon="mdi:shield-star" className="w-4 h-4" />
-                                                            Make Admin
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleChangeRole(user.id, 'moderator')}
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                                        >
-                                                            <Iconify icon="mdi:shield-account" className="w-4 h-4" />
-                                                            Make Moderator
-                                                        </button>
+                                                        {isAdmin && (
+                                                            <button 
+                                                                onClick={() => handleTransferOwnership(user.id, user.name)}
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                            >
+                                                                <Iconify icon="mdi:crown-circle" className="w-4 h-4" />
+                                                                Transfer Ownership
+                                                            </button>
+                                                        )}
+                                                        {userRole === 'member' && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleChangeRole(user.id, 'admin')}
+                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                >
+                                                                    <Iconify icon="mdi:shield-star" className="w-4 h-4" />
+                                                                    Make Admin
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleChangeRole(user.id, 'moderator')}
+                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                >
+                                                                    <Iconify icon="mdi:shield-account" className="w-4 h-4" />
+                                                                    Make Moderator
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {userRole === 'admin' && (
+                                                            <button 
+                                                                onClick={() => handleChangeRole(user.id, 'member')}
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                            >
+                                                                <Iconify icon="mdi:account-arrow-down" className="w-4 h-4" />
+                                                                Remove Admin
+                                                            </button>
+                                                        )}
+                                                        {userRole === 'moderator' && (
+                                                            <button 
+                                                                onClick={() => handleChangeRole(user.id, 'member')}
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                            >
+                                                                <Iconify icon="mdi:account-arrow-down" className="w-4 h-4" />
+                                                                Remove Moderator
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={() => handleRemoveMember(user.id, user.name)}
                                                             className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg flex items-center gap-2"
@@ -322,6 +413,18 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                     <ModalHeader>Edit Group Info</ModalHeader>
                     <ModalBody>
                         <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                    Group Avatar
+                                </label>
+                                <AvatarUpload 
+                                    existingAvatar={group?.avatar}
+                                    onFilesChange={setAvatarFiles}
+                                    onRemoveAvatar={handleRemoveAvatar}
+                                    isOpen={editModalOpen}
+                                    size="w-48"
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                                     Group Name
@@ -355,9 +458,10 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                 </button>
                                 <button
                                     onClick={handleEditGroup}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                                    disabled={isUploading}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
                                 >
-                                    Save Changes
+                                    {isUploading ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
                         </div>

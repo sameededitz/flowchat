@@ -23,6 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/group/{group}/invite', [GroupController::class, 'invite'])->name('group.invite');
     Route::post('/group/{group}/member/{user}/role', [GroupController::class, 'updateMemberRole'])->name('group.member.role');
     Route::delete('/group/{group}/member/{user}', [GroupController::class, 'removeMember'])->name('group.member.remove');
+    Route::post('/group/{group}/transfer-ownership/{user}', [GroupController::class, 'transferOwnership'])->name('group.transfer-ownership');
+    Route::delete('/group/{group}/avatar', [GroupController::class, 'removeAvatar'])->name('group.avatar.remove');
 });
 
 Route::middleware('auth')->group(function () {

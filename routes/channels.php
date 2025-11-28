@@ -7,13 +7,21 @@ Broadcast::channel('online', function ($user) {
 });
 
 Broadcast::channel('group.{groupId}', function ($user, $groupId) {
-    return $user && $user->groups->contains($groupId)
+    // Check if user is a member of the group OR the owner of the group
+    $isMember = $user->groups->contains($groupId);
+    $isOwner = \App\Models\Group::where('id', $groupId)->where('owner_id', $user->id)->exists();
+    
+    return $user && ($isMember || $isOwner)
         ? new \App\Http\Resources\UserResource($user)
         : null;
 });
 
 Broadcast::channel('message.group.{groupId}', function ($user, $groupId) {
-    return $user && $user->groups->contains($groupId)
+    // Check if user is a member of the group OR the owner of the group
+    $isMember = $user->groups->contains($groupId);
+    $isOwner = \App\Models\Group::where('id', $groupId)->where('owner_id', $user->id)->exists();
+    
+    return $user && ($isMember || $isOwner)
         ? new \App\Http\Resources\UserResource($user)
         : null;
 });
