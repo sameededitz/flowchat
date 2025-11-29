@@ -196,7 +196,7 @@ const ChatLayout = ({ children }) => {
                 >
                     <div className="flex items-center justify-between py-2 px-3 text-xl font-medium">
                         <span>Conversations</span>
-                        <Tooltip content="New Conversation">
+                        <Tooltip content="New Conversation or Group">
                             <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                                 <Iconify icon="mdi:plus" className="w-6 h-6" />
                             </button>

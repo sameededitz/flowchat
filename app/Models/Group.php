@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Group extends Model
@@ -50,9 +51,9 @@ class Group extends Model
             ->with(['owner', 'members'])
             ->leftJoin('group_users', 'group_users.group_id', '=', 'groups.id')
             ->leftJoin('messages', 'messages.id', '=', 'groups.last_message_id')
-            ->where(function($q) use ($user) {
+            ->where(function ($q) use ($user) {
                 $q->where('group_users.user_id', $user->id)
-                  ->orWhere('groups.owner_id', $user->id);
+                    ->orWhere('groups.owner_id', $user->id);
             })
             ->groupBy('groups.id')
             ->orderBy('messages.created_at', 'desc')
@@ -63,12 +64,14 @@ class Group extends Model
 
     public function toConversationArray()
     {
+        $disk = Storage::disk('profile');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
             'slug' => $this->slug,
-            'avatar' => $this->avatar,
+            'avatar' => $disk->url($this->avatar),
             'owner_id' => $this->owner_id,
             'owner' => $this->owner,
             'is_group' => true,

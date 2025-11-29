@@ -49,17 +49,13 @@ const GroupInfoModal = ({ show, onClose, group }) => {
             const formData = new FormData();
             formData.append('name', groupData.name);
             formData.append('description', groupData.description || '');
-            
-            // Add avatar if there's a new file
+
             if (avatarFiles.length > 0) {
-                console.log('Avatar files:', avatarFiles);
                 const fileItem = avatarFiles[0];
-                // FilePond stores the actual file in different ways depending on the state
-                const file = fileItem.file || fileItem.getFileEncodeDataURL?.() || fileItem;
-                console.log('File to upload:', file);
+                const file = fileItem.file;
                 
-                if (file instanceof File || file instanceof Blob) {
-                    formData.append('avatar', file);
+                if (file instanceof File) {
+                    formData.append('avatar', file, file.name);
                 }
             }
             

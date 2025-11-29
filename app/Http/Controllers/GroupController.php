@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Group;
 use App\Models\User;
+use App\Models\Group;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class GroupController extends Controller
@@ -34,19 +35,20 @@ class GroupController extends Controller
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
 
+        // dd($request->file('avatar'));
+
         // Handle avatar upload
         if ($request->hasFile('avatar')) {
             // Delete old avatar if exists
             if ($group->avatar) {
-                $oldAvatarPath = str_replace(config('app.url') . '/storage/profile/', '', $group->avatar);
-                \Storage::disk('profile')->delete($oldAvatarPath);
+                Storage::disk('profile')->delete($group->avatar);
             }
             
             // Store new avatar
             $avatarFile = $request->file('avatar');
-            $filename = 'group_' . $group->id . '_' . time() . '.' . $avatarFile->getClientOriginalExtension();
-            $avatarFile->storeAs('', $filename, 'profile');
-            $validated['avatar'] = config('app.url') . '/storage/profile/' . $filename;
+            $filename = Str::random(10) . '.' . $avatarFile->getClientOriginalExtension();
+            $storedPath = $avatarFile->storeAs('', $filename, 'profile');
+            $validated['avatar'] = $storedPath;
         }
 
         $group->update($validated);

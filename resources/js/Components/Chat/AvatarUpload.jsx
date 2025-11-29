@@ -56,9 +56,11 @@ const AvatarUpload = ({
 }) => {
     const [avatarFiles, setAvatarFiles] = useState([]);
     const toast = useToast();
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     useEffect(() => {
         if (isOpen && existingAvatar) {
+            setIsInitialLoad(true);
             setAvatarFiles([{
                 source: existingAvatar,
                 options: {
@@ -68,11 +70,11 @@ const AvatarUpload = ({
         } else if (!isOpen) {
             // Reset files when modal closes
             setAvatarFiles([]);
+            setIsInitialLoad(true);
         }
     }, [isOpen, existingAvatar]);
 
     const handleFilesUpdate = (files) => {
-        console.log('Files updated:', files);
         setAvatarFiles(files);
         onFilesChange(files);
     };
@@ -152,11 +154,6 @@ const AvatarUpload = ({
                             }
                         ],
                         imageProcessor: processImage,
-                        imageEditorAfterWriteImage: (res) => {
-                            console.log('After write image:', res);
-                            // Return the edited/processed image
-                            return res.dest;
-                        },
                         editorOptions: {
                             utils: ['crop', 'finetune', 'filter', 'annotate'],
                             imageOrienter: createDefaultImageOrienter(),
@@ -174,9 +171,6 @@ const AvatarUpload = ({
                                 ...markup_editor_locale_en_gb,
                             },
                         },
-                        onconfirm: (res) => {
-                            console.log('Edit confirmed:', res);
-                        }
                     }}
                     stylePanelLayout="compact circle"
                     styleImageEditButtonEditItemPosition="bottom center"
