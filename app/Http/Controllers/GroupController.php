@@ -13,6 +13,54 @@ use Illuminate\Support\Facades\Storage;
 class GroupController extends Controller
 {
     /**
+     * Create a new group
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:500',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id'
+        ]);
+
+        // Create the group
+        $group = Group::create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'owner_id' => Auth::id(),
+        ]);
+
+        // Handle avatar upload if provided
+        if ($request->hasFile('avatar')) {
+            $avatarFile = $request->file('avatar');
+            $filename = 'group_' . $group->id . '_' . time() . '.' . $avatarFile->getClientOriginalExtension();
+            $storedPath = $avatarFile->storeAs('', $filename, 'profile');
+            $group->update(['avatar' => $storedPath]);
+        }
+
+        // Add the creator as admin
+        $group->members()->attach(Auth::id(), ['role' => 'admin']);
+
+        // Add selected members
+        foreach ($validated['user_ids'] as $userId) {
+            if ($userId != Auth::id()) {
+                $group->members()->attach($userId, ['role' => 'member', 'joined_at' => now(), 'invited_by' => Auth::id()]);
+            }
+        }
+
+        // Load relationships for response
+        $group->load(['owner', 'members']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Group created successfully',
+            'group' => $group
+        ]);
+    }
+
+    /**
      * Update group information (name, description, avatar)
      */
     public function update(Request $request, Group $group)

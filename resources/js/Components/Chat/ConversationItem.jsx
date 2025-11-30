@@ -30,7 +30,7 @@ const ConversationItem = ({ conversation, online, selectedConversation = null })
       {conversation.is_user && (
         <UserAvatar user={conversation} online={online} />
       )}
-      {conversation.is_group && <GroupAvatar />}
+      {conversation.is_group && <GroupAvatar group={conversation} />}
       <div className={
         `flex-1 text-xs max-w-full overflow-hidden` +
         (conversation.is_user && conversation.blocked_at ? "opacity-50" : "")}>

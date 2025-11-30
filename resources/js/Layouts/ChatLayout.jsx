@@ -200,7 +200,7 @@ const ChatLayout = ({ children }) => {
             <div className="flex-1 w-full flex overflow-hidden bg-white text-gray-900 dark:text-white dark:bg-gray-800 dark:border-gray-700">
                 {/* Sidebar */}
                 <div
-                    className={`transition-all w-full sm:w-[220px] md:w-[300px] min-w-0 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden md:flex' : 'flex'}`}
+                    className={`transition-all w-full sm:w-[280px] md:w-[320px] lg:w-[360px] bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-gray-700 flex flex-col ${selectedConversation ? 'hidden sm:flex' : 'flex'}`}
                 >
                     <div className="flex items-center justify-between py-2 px-3 text-xl font-medium">
                         <span>Conversations</span>
@@ -233,7 +233,7 @@ const ChatLayout = ({ children }) => {
                 </div>
 
                 {/* Messages and other content */}
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className={`flex-1 flex flex-col min-h-0 ${!selectedConversation ? 'hidden sm:flex' : 'flex'}`}>
                     {children}
                 </div>
             </div>

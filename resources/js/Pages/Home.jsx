@@ -219,11 +219,11 @@ function Home({ messages, selectedConversation }) {
     return (
         <>
             {!messages && (
-                <div className="flex flex-col items-center justify-center h-full opacity-35">
-                    <div className="text-2xl font-bold text-gray-500 dark:text-gray-300">
-                        Please select a conversation from the left sidebar to see the messages.
+                <div className="flex flex-col items-center justify-center h-full opacity-35 px-4">
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-500 dark:text-gray-300 text-center">
+                        Please select a conversation to see messages
                     </div>
-                    <Iconify icon="mdi:message-outline" className="mt-4 h-12 w-12 text-gray-400" />
+                    <Iconify icon="mdi:message-outline" className="mt-4 h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
                 </div>
             )}
 

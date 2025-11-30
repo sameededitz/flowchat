@@ -7,6 +7,7 @@ import { usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import { useToast } from '../../Hooks/useToast';
 import AvatarUpload from './AvatarUpload';
+import MembersPicker from './MembersPicker';
 
 const GroupInfoModal = ({ show, onClose, group }) => {
     const { auth } = usePage().props;
@@ -30,13 +31,15 @@ const GroupInfoModal = ({ show, onClose, group }) => {
     const [avatarFiles, setAvatarFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
 
+    const [selectedUsers, setSelectedUsers] = useState([]);
+
     if (!group) return null;
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -53,19 +56,19 @@ const GroupInfoModal = ({ show, onClose, group }) => {
             if (avatarFiles.length > 0) {
                 const fileItem = avatarFiles[0];
                 const file = fileItem.file;
-                
+
                 if (file instanceof File) {
                     formData.append('avatar', file, file.name);
                 }
             }
-            
+
             const response = await axios.post(route('group.update', group.id), formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'X-HTTP-Method-Override': 'PATCH'
                 }
             });
-            
+
             toast.success(response.data.message);
             setEditModalOpen(false);
             setAvatarFiles([]);
@@ -81,7 +84,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
         if (!confirm('Are you sure you want to remove the group avatar?')) {
             return;
         }
-        
+
         try {
             const response = await axios.delete(route('group.avatar.remove', group.id));
             toast.success(response.data.message);
@@ -185,22 +188,20 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                     <div className="flex border-b border-gray-200 dark:border-gray-700">
                         <button
                             onClick={() => setActiveTab('info')}
-                            className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
-                                activeTab === 'info'
+                            className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${activeTab === 'info'
                                     ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
+                                }`}
                         >
                             <Iconify icon="mdi:information" className="inline w-5 h-5 mr-2" />
                             Information
                         </button>
                         <button
                             onClick={() => setActiveTab('members')}
-                            className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${
-                                activeTab === 'members'
+                            className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${activeTab === 'members'
                                     ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
+                                }`}
                         >
                             <Iconify icon="mdi:account-group" className="inline w-5 h-5 mr-2" />
                             Members ({group.users?.length || 0})
@@ -254,7 +255,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                     </h3>
                                     <div className="space-y-2">
                                         {(isAdmin || currentUserRole === 'admin') && (
-                                            <button 
+                                            <button
                                                 onClick={() => setEditModalOpen(true)}
                                                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
                                             >
@@ -262,7 +263,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                 <span className="text-sm text-gray-900 dark:text-white">Edit Group Info</span>
                                             </button>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={() => setInviteModalOpen(true)}
                                             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
                                         >
@@ -270,7 +271,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                             <span className="text-sm text-gray-900 dark:text-white">Invite Members</span>
                                         </button>
                                         {isAdmin && (
-                                            <button 
+                                            <button
                                                 onClick={handleDeleteGroup}
                                                 className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
                                             >
@@ -299,8 +300,8 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                                                <img 
-                                                    src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
+                                                <img
+                                                    src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
                                                     alt={user.name}
                                                     className="w-full h-full object-cover"
                                                 />
@@ -332,7 +333,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                     Admin
                                                 </span>
                                             ) : null}
-                                            
+
                                             {canManage && (
                                                 <div className="relative group">
                                                     <button className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
@@ -340,7 +341,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                     </button>
                                                     <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                                                         {isAdmin && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleTransferOwnership(user.id, user.name)}
                                                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                                             >
@@ -350,14 +351,14 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                         )}
                                                         {userRole === 'member' && (
                                                             <>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleChangeRole(user.id, 'admin')}
                                                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                                                 >
                                                                     <Iconify icon="mdi:shield-star" className="w-4 h-4" />
                                                                     Make Admin
                                                                 </button>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleChangeRole(user.id, 'moderator')}
                                                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                                                 >
@@ -367,7 +368,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                             </>
                                                         )}
                                                         {userRole === 'admin' && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleChangeRole(user.id, 'member')}
                                                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                                             >
@@ -376,7 +377,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                             </button>
                                                         )}
                                                         {userRole === 'moderator' && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleChangeRole(user.id, 'member')}
                                                                 className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                                             >
@@ -384,7 +385,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                                 Remove Moderator
                                                             </button>
                                                         )}
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleRemoveMember(user.id, user.name)}
                                                             className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg flex items-center gap-2"
                                                         >
@@ -413,7 +414,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                 <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                                     Group Avatar
                                 </label>
-                                <AvatarUpload 
+                                <AvatarUpload
                                     existingAvatar={group?.avatar}
                                     onFilesChange={setAvatarFiles}
                                     onRemoveAvatar={handleRemoveAvatar}
@@ -465,22 +466,43 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                 </Modal>
             )}
 
-            {/* Invite Members Modal - Simplified for now */}
+            {/* Invite Members Modal */}
             {inviteModalOpen && (
-                <Modal show={inviteModalOpen} onClose={() => setInviteModalOpen(false)}>
-                    <ModalHeader>Invite Members</ModalHeader>
+                <Modal show={inviteModalOpen} onClose={() => { setInviteModalOpen(false); setSelectedUsers([]); }}>
+                    <ModalHeader>Invite Members to {group.name}</ModalHeader>
                     <ModalBody>
                         <div className="space-y-4">
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Member invitation feature will be implemented with user selection UI.
-                                For now, you can invite users by their ID in the backend.
+                                Search and select users to invite to this group. Members who are already in the group will not appear in search results.
                             </p>
-                            <div className="flex gap-2 justify-end">
+                            
+                            <MembersPicker
+                                selectedUsers={selectedUsers}
+                                onUsersChange={setSelectedUsers}
+                                label="Select Members to Invite"
+                                placeholder="Search by name or email..."
+                                required={false}
+                                excludeUserIds={group.users?.map(u => u.id) || []}
+                            />
+                            
+                            <div className="flex gap-2 justify-end pt-4">
                                 <button
-                                    onClick={() => setInviteModalOpen(false)}
+                                    onClick={() => { setInviteModalOpen(false); setSelectedUsers([]); }}
                                     className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg"
                                 >
-                                    Close
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (selectedUsers.length > 0) {
+                                            handleInviteMembers(selectedUsers.map(u => u.id));
+                                            setSelectedUsers([]);
+                                        }
+                                    }}
+                                    disabled={selectedUsers.length === 0}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+                                >
+                                    Invite {selectedUsers.length > 0 ? `(${selectedUsers.length})` : ''}
                                 </button>
                             </div>
                         </div>

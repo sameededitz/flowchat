@@ -35,7 +35,6 @@ class Group extends Model
             ->withPivot('role', 'is_active', 'joined_at', 'invited_by')
             ->withTimestamps();
     }
-
     public function messages()
     {
         return $this->hasMany(Message::class);
@@ -71,7 +70,7 @@ class Group extends Model
             'name' => $this->name,
             'description' => $this->description,
             'slug' => $this->slug,
-            'avatar' => $disk->url($this->avatar),
+            'avatar' => $this->avatar ? $disk->url($this->avatar) : null,
             'owner_id' => $this->owner_id,
             'owner' => $this->owner,
             'is_group' => true,

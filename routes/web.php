@@ -4,6 +4,7 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -17,7 +18,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/message/{message}', [MessageController::class, 'destroy'])->name('message.destroy');
     Route::get('/message/older/{message}', [MessageController::class, 'older'])->name('message.load.older');
 
+    // User search and conversation routes
+    Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
+    Route::post('/conversation/find-or-create', [UserController::class, 'findOrCreateConversation'])->name('conversation.find-or-create');
+
     // Group management routes
+    Route::post('/group/store', [GroupController::class, 'store'])->name('group.store');
     Route::patch('/group/{group}', [GroupController::class, 'update'])->name('group.update');
     Route::delete('/group/{group}', [GroupController::class, 'destroy'])->name('group.destroy');
     Route::post('/group/{group}/invite', [GroupController::class, 'invite'])->name('group.invite');

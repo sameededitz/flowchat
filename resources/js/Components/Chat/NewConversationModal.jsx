@@ -3,18 +3,19 @@ import { Modal, ModalBody, ModalHeader, Button, Tabs, TextInput, Label, Textarea
 import Iconify from '../Iconify';
 import UserAvatar from './UserAvatar';
 import AvatarUpload from './AvatarUpload';
+import MembersPicker from './MembersPicker';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { useToast } from '../../Hooks/useToast';
 
 const NewConversationModal = ({ show, onClose }) => {
     const [activeTab, setActiveTab] = useState('conversation'); // 'conversation' or 'group'
-    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     
     // Conversation tab state
-    const [selectedUser, setSelectedUser] = useState(null);
+    const [email, setEmail] = useState('');
+    const [searchStatus, setSearchStatus] = useState(''); // 'searching', 'found', 'not-found', ''
+    const [foundUser, setFoundUser] = useState(null);
     
     // Group tab state
     const [groupName, setGroupName] = useState('');
@@ -24,51 +25,77 @@ const NewConversationModal = ({ show, onClose }) => {
     
     const toast = useToast();
 
-    // Fetch users when modal opens
+    // Real-time email search
     useEffect(() => {
-        if (show) {
-            fetchUsers();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!email.trim()) {
+            setSearchStatus('');
+            setFoundUser(null);
+            return;
         }
-    }, [show]);
 
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            // TODO: Create this route in Laravel
-            const response = await axios.get('/users/search');
-            setUsers(response.data);
-        } catch (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Failed to load users');
-        } finally {
-            setLoading(false);
+        if (!emailRegex.test(email)) {
+            setSearchStatus('');
+            setFoundUser(null);
+            return;
         }
-    };
 
-    const filteredUsers = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+        const timeoutId = setTimeout(async () => {
+            try {
+                setSearchStatus('searching');
+                const response = await axios.get(`/users/search?query=${email}`);
+                
+                if (response.data && response.data.length > 0) {
+                    const user = response.data.find(u => u.email.toLowerCase() === email.toLowerCase());
+                    if (user) {
+                        setFoundUser(user);
+                        setSearchStatus('found');
+                    } else {
+                        setFoundUser(null);
+                        setSearchStatus('not-found');
+                    }
+                } else {
+                    setFoundUser(null);
+                    setSearchStatus('not-found');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                setSearchStatus('not-found');
+                setFoundUser(null);
+            }
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [email]);
 
     const handleCreateConversation = async () => {
-        if (!selectedUser) {
-            toast.error('Please select a user');
+        if (!email.trim()) {
+            toast.error('Please enter an email address');
+            return;
+        }
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error('Please enter a valid email address');
             return;
         }
 
         try {
             setLoading(true);
-            // TODO: Create this route in Laravel
-            const response = await axios.post('/conversation/create', {
-                user_id: selectedUser.id
+            const response = await axios.post('/conversation/find-or-create', {
+                email: email.trim()
             });
             
-            toast.success('Conversation created');
-            router.visit(route('chat.user', selectedUser.id));
-            handleClose();
+            if (response.data.user_id) {
+                toast.success(response.data.has_conversation ? 'Opening conversation...' : 'Conversation created');
+                router.visit(route('chat.user', response.data.user_id));
+                handleClose();
+            }
         } catch (error) {
             console.error('Error creating conversation:', error);
-            toast.error(error.response?.data?.message || 'Failed to create conversation');
+            toast.error(error.response?.data?.message || 'User not found or failed to create conversation');
         } finally {
             setLoading(false);
         }
@@ -104,15 +131,14 @@ const NewConversationModal = ({ show, onClose }) => {
                 }
             }
 
-            // TODO: Create this route in Laravel
-            const response = await axios.post('/group/create', formData, {
+            const response = await axios.post('/group/store', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
 
             toast.success('Group created successfully');
-            router.visit(route('chat.group', response.data.id));
+            router.visit(route('chat.group', response.data.group.id));
             handleClose();
         } catch (error) {
             console.error('Error creating group:', error);
@@ -122,37 +148,15 @@ const NewConversationModal = ({ show, onClose }) => {
         }
     };
 
-    const toggleUserSelection = (user) => {
-        if (activeTab === 'conversation') {
-            setSelectedUser(user);
-        } else {
-            setSelectedUsers(prev => {
-                const isSelected = prev.find(u => u.id === user.id);
-                if (isSelected) {
-                    return prev.filter(u => u.id !== user.id);
-                } else {
-                    return [...prev, user];
-                }
-            });
-        }
-    };
-
-    const isUserSelected = (user) => {
-        if (activeTab === 'conversation') {
-            return selectedUser?.id === user.id;
-        } else {
-            return selectedUsers.some(u => u.id === user.id);
-        }
-    };
-
     const handleClose = () => {
         setActiveTab('conversation');
-        setSelectedUser(null);
+        setEmail('');
+        setSearchStatus('');
+        setFoundUser(null);
         setSelectedUsers([]);
         setGroupName('');
         setGroupDescription('');
         setAvatarFiles([]);
-        setSearchTerm('');
         onClose();
     };
 
@@ -199,44 +203,71 @@ const NewConversationModal = ({ show, onClose }) => {
                 {activeTab === 'conversation' && (
                     <div className="space-y-4">
                         <div>
-                            <Label htmlFor="search-user">Search Users</Label>
-                            <TextInput
-                                id="search-user"
-                                type="text"
-                                placeholder="Search by name or email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                icon={() => <Iconify icon="mdi:magnify" className="w-5 h-5" />}
-                            />
-                        </div>
-
-                        <div className="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                            {loading ? (
-                                <div className="p-4 text-center">Loading users...</div>
-                            ) : filteredUsers.length === 0 ? (
-                                <div className="p-4 text-center text-gray-500">No users found</div>
-                            ) : (
-                                <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filteredUsers.map(user => (
-                                        <div
-                                            key={user.id}
-                                            className={`p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                                                isUserSelected(user) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                            }`}
-                                            onClick={() => toggleUserSelection(user)}
-                                        >
-                                            <UserAvatar user={user} online={false} />
-                                            <div className="flex-1">
-                                                <div className="font-medium">{user.name}</div>
-                                                <div className="text-sm text-gray-500">{user.email}</div>
+                            <Label htmlFor="user-email">User Email Address</Label>
+                            <div className="relative">
+                                <TextInput
+                                    id="user-email"
+                                    type="email"
+                                    placeholder="Enter user's email address..."
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && email.trim() && foundUser) {
+                                            handleCreateConversation();
+                                        }
+                                    }}
+                                    icon={() => <Iconify icon="mdi:email-outline" className="w-5 h-5" />}
+                                    autoFocus
+                                    color={searchStatus === 'found' ? 'success' : searchStatus === 'not-found' ? 'failure' : 'gray'}
+                                />
+                                {searchStatus === 'searching' && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Iconify icon="mdi:loading" className="w-5 h-5 text-gray-400 animate-spin" />
+                                    </div>
+                                )}
+                                {searchStatus === 'found' && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Iconify icon="mdi:check-circle" className="w-5 h-5 text-green-500" />
+                                    </div>
+                                )}
+                                {searchStatus === 'not-found' && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Iconify icon="mdi:close-circle" className="w-5 h-5 text-red-500" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* User found preview */}
+                            {foundUser && searchStatus === 'found' && (
+                                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <UserAvatar user={foundUser} online={false} profile={false} />
+                                        <div className="flex-1">
+                                            <div className="font-medium text-green-900 dark:text-green-100">
+                                                {foundUser.name}
                                             </div>
-                                            {isUserSelected(user) && (
-                                                <Iconify icon="mdi:check-circle" className="w-6 h-6 text-blue-600" />
-                                            )}
+                                            <div className="text-sm text-green-700 dark:text-green-300">
+                                                {foundUser.email}
+                                            </div>
                                         </div>
-                                    ))}
+                                        <Iconify icon="mdi:check-circle" className="w-6 h-6 text-green-600" />
+                                    </div>
                                 </div>
                             )}
+                            
+                            {/* User not found message */}
+                            {searchStatus === 'not-found' && (
+                                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                    <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+                                        <Iconify icon="mdi:alert-circle" className="w-5 h-5" />
+                                        <span className="text-sm">User not found with this email address</span>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                Enter the email address of the user you want to chat with. If a conversation already exists, it will be reopened.
+                            </p>
                         </div>
 
                         <div className="flex justify-end gap-2 pt-4">
@@ -246,9 +277,9 @@ const NewConversationModal = ({ show, onClose }) => {
                             <Button 
                                 color="blue" 
                                 onClick={handleCreateConversation}
-                                disabled={!selectedUser || loading}
+                                disabled={!foundUser || loading}
                             >
-                                {loading ? 'Creating...' : 'Start Conversation'}
+                                {loading ? 'Opening Chat...' : 'Start Chat'}
                             </Button>
                         </div>
                     </div>
@@ -257,6 +288,16 @@ const NewConversationModal = ({ show, onClose }) => {
                 {/* Group Tab */}
                 {activeTab === 'group' && (
                     <div className="space-y-4">
+                        <div>
+                            <Label>Group Avatar (optional)</Label>
+                            <AvatarUpload
+                                existingAvatar={null}
+                                onFilesChange={setAvatarFiles}
+                                onRemoveAvatar={() => setAvatarFiles([])}
+                                isOpen={show}
+                            />
+                        </div>
+
                         <div>
                             <Label htmlFor="group-name">Group Name *</Label>
                             <TextInput
@@ -280,76 +321,13 @@ const NewConversationModal = ({ show, onClose }) => {
                             />
                         </div>
 
-                        <div>
-                            <Label>Group Avatar (optional)</Label>
-                            <AvatarUpload
-                                existingAvatar={null}
-                                onFilesChange={setAvatarFiles}
-                                onRemoveAvatar={() => setAvatarFiles([])}
-                                isOpen={show}
-                                size="lg"
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="search-members">Add Members *</Label>
-                            <TextInput
-                                id="search-members"
-                                type="text"
-                                placeholder="Search users to add..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                icon={() => <Iconify icon="mdi:magnify" className="w-5 h-5" />}
-                            />
-                        </div>
-
-                        {selectedUsers.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                {selectedUsers.map(user => (
-                                    <div
-                                        key={user.id}
-                                        className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full"
-                                    >
-                                        <span className="text-sm">{user.name}</span>
-                                        <button
-                                            onClick={() => toggleUserSelection(user)}
-                                            className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
-                                        >
-                                            <Iconify icon="mdi:close" className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                            {loading ? (
-                                <div className="p-4 text-center">Loading users...</div>
-                            ) : filteredUsers.length === 0 ? (
-                                <div className="p-4 text-center text-gray-500">No users found</div>
-                            ) : (
-                                <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filteredUsers.map(user => (
-                                        <div
-                                            key={user.id}
-                                            className={`p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                                                isUserSelected(user) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                                            }`}
-                                            onClick={() => toggleUserSelection(user)}
-                                        >
-                                            <UserAvatar user={user} online={false} />
-                                            <div className="flex-1">
-                                                <div className="font-medium">{user.name}</div>
-                                                <div className="text-sm text-gray-500">{user.email}</div>
-                                            </div>
-                                            {isUserSelected(user) && (
-                                                <Iconify icon="mdi:check-circle" className="w-6 h-6 text-blue-600" />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <MembersPicker
+                            selectedUsers={selectedUsers}
+                            onUsersChange={setSelectedUsers}
+                            label="Add Members"
+                            placeholder="Search by name or email..."
+                            required={true}
+                        />
 
                         <div className="flex justify-end gap-2 pt-4">
                             <Button color="gray" onClick={handleClose}>
