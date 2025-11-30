@@ -2,6 +2,7 @@ import ConversationItem from '@/Components/Chat/ConversationItem';
 import Iconify from '@/Components/Iconify';
 import TextInput from '@/Components/TextInput';
 import MessageListener from '@/Components/MessageListener';
+import NewConversationModal from '@/Components/Chat/NewConversationModal';
 import { Link, usePage } from '@inertiajs/react'
 import { Dropdown, DropdownDivider, DropdownItem, Tooltip } from "flowbite-react";
 import React, { useEffect, useState } from 'react'
@@ -16,6 +17,7 @@ const ChatLayout = ({ children }) => {
     const selectedConversation = page.props.selectedConversation;
     const [localConversations, setLocalConversations] = useState(null);
     const [sortedConversations, setSortedConversations] = useState({});
+    const [showNewConversationModal, setShowNewConversationModal] = useState(false);
 
     const [onlineUsers, setOnlineUsers] = useState({});
 
@@ -142,6 +144,12 @@ const ChatLayout = ({ children }) => {
             {/* Global Message Listener */}
             <MessageListener />
             
+            {/* New Conversation Modal */}
+            <NewConversationModal 
+                show={showNewConversationModal} 
+                onClose={() => setShowNewConversationModal(false)} 
+            />
+            
             {/* Navbar */}
             <nav className="w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-3 py-3 lg:px-5 lg:pl-3">
@@ -197,7 +205,10 @@ const ChatLayout = ({ children }) => {
                     <div className="flex items-center justify-between py-2 px-3 text-xl font-medium">
                         <span>Conversations</span>
                         <Tooltip content="New Conversation or Group">
-                            <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                            <button 
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                onClick={() => setShowNewConversationModal(true)}
+                            >
                                 <Iconify icon="mdi:plus" className="w-6 h-6" />
                             </button>
                         </Tooltip>
