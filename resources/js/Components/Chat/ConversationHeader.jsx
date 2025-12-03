@@ -23,7 +23,7 @@ const ConversationHeader = ({ selectedConversation }) => {
                         {selectedConversation.is_user && (
                             <UserAvatar user={selectedConversation} />
                         )}
-                        {selectedConversation.is_group && <GroupAvatar />}
+                        {selectedConversation.is_group && <GroupAvatar group={selectedConversation} size='sm' />}
                         <div>
                             <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
                                 {selectedConversation.name}

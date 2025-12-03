@@ -10,7 +10,7 @@ const UserAvatar = ({ user, online = null, profile = false, size = null }) => {
       {user.avatar_url ? (
         <Avatar rounded img={user.avatar_url} alt={user.name} status={onlineStatus} statusPosition="top-right" className={avatarSize} />
       ) : (
-        <Avatar rounded img={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&rounded=true`} status={onlineStatus} statusPosition="top-right" alt={user.name} placeholderInitials={user.name.substring(0,1)} className={avatarSize} />
+        <Avatar rounded img={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&rounded=true&size=64`} status={onlineStatus} statusPosition="top-right" alt={user.name} placeholderInitials={user.name.substring(0,1)} className={avatarSize} />
       )}
     </>
   )
