@@ -3,7 +3,7 @@ import { Modal, ModalBody, ModalHeader } from 'flowbite-react';
 import Iconify from '../Iconify';
 import GroupAvatar from './GroupAvatar';
 import UserAvatar from './UserAvatar';
-import { usePage, router } from '@inertiajs/react';
+import { usePage, router, Link } from '@inertiajs/react';
 import axios from 'axios';
 import { useToast } from '../../Hooks/useToast';
 import AvatarUpload from './AvatarUpload';
@@ -104,7 +104,6 @@ const GroupInfoModal = ({ show, onClose, group }) => {
             const response = await axios.delete(route('group.destroy', group.id));
             toast.success(response.data.message);
             onClose();
-            router.visit(route('dashboard'));
         } catch (error) {
             toast.error(error.response?.data?.error || 'Failed to delete group');
         }
@@ -159,8 +158,13 @@ const GroupInfoModal = ({ show, onClose, group }) => {
         }
     };
 
+    const handleOnClose = () => {
+        setActiveTab('info');
+        onClose();
+    }
+
     return (
-        <Modal show={show} onClose={onClose} size="lg">
+        <Modal show={show} onClose={handleOnClose} size="lg">
             <ModalHeader>
                 <div className="flex items-center gap-3">
                     <GroupAvatar group={group} />
@@ -189,8 +193,8 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                         <button
                             onClick={() => setActiveTab('info')}
                             className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${activeTab === 'info'
-                                    ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
                         >
                             <Iconify icon="mdi:information" className="inline w-5 h-5 mr-2" />
@@ -199,8 +203,8 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                         <button
                             onClick={() => setActiveTab('members')}
                             className={`flex-1 py-2 px-4 text-center font-medium transition-colors ${activeTab === 'members'
-                                    ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                ? 'text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
                         >
                             <Iconify icon="mdi:account-group" className="inline w-5 h-5 mr-2" />
@@ -298,24 +302,26 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                         key={user.id}
                                         className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                                                <img
-                                                    src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-                                                    alt={user.name}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                        <Link href={`/profile/${user.id}`} className='flex-1 hover:opacity-80 transition-opacity'>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                                                    <img
+                                                        src={user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
+                                                        alt={user.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {user.name}
+                                                        {user.id === currentUser.id && (
+                                                            <span className="text-blue-600 dark:text-blue-400 ml-1">(You)</span>
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {user.name}
-                                                    {user.id === currentUser.id && (
-                                                        <span className="text-blue-600 dark:text-blue-400 ml-1">(You)</span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                                            </div>
-                                        </div>
+                                        </Link>
                                         <div className="flex items-center gap-2">
                                             {isOwner ? (
                                                 <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
@@ -336,14 +342,14 @@ const GroupInfoModal = ({ show, onClose, group }) => {
 
                                             {canManage && (
                                                 <div className="relative group">
-                                                    <button className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                                                    <button className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                                                         <Iconify icon="mdi:dots-vertical" className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                                                     </button>
                                                     <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                                                         {isAdmin && (
                                                             <button
                                                                 onClick={() => handleTransferOwnership(user.id, user.name)}
-                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                                                             >
                                                                 <Iconify icon="mdi:crown-circle" className="w-4 h-4" />
                                                                 Transfer Ownership
@@ -353,14 +359,14 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                             <>
                                                                 <button
                                                                     onClick={() => handleChangeRole(user.id, 'admin')}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                                                                 >
                                                                     <Iconify icon="mdi:shield-star" className="w-4 h-4" />
                                                                     Make Admin
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleChangeRole(user.id, 'moderator')}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                                                                 >
                                                                     <Iconify icon="mdi:shield-account" className="w-4 h-4" />
                                                                     Make Moderator
@@ -370,7 +376,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                         {userRole === 'admin' && (
                                                             <button
                                                                 onClick={() => handleChangeRole(user.id, 'member')}
-                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                                                             >
                                                                 <Iconify icon="mdi:account-arrow-down" className="w-4 h-4" />
                                                                 Remove Admin
@@ -379,7 +385,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                         {userRole === 'moderator' && (
                                                             <button
                                                                 onClick={() => handleChangeRole(user.id, 'member')}
-                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
                                                             >
                                                                 <Iconify icon="mdi:account-arrow-down" className="w-4 h-4" />
                                                                 Remove Moderator
@@ -387,7 +393,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                                         )}
                                                         <button
                                                             onClick={() => handleRemoveMember(user.id, user.name)}
-                                                            className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg flex items-center gap-2"
+                                                            className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg flex items-center gap-2 transition-colors"
                                                         >
                                                             <Iconify icon="mdi:account-remove" className="w-4 h-4" />
                                                             Remove Member
@@ -475,7 +481,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Search and select users to invite to this group. Members who are already in the group will not appear in search results.
                             </p>
-                            
+
                             <MembersPicker
                                 selectedUsers={selectedUsers}
                                 onUsersChange={setSelectedUsers}
@@ -484,7 +490,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                 required={false}
                                 excludeUserIds={group.users?.map(u => u.id) || []}
                             />
-                            
+
                             <div className="flex gap-2 justify-end pt-4">
                                 <button
                                     onClick={() => { setInviteModalOpen(false); setSelectedUsers([]); }}

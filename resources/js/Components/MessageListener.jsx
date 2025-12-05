@@ -84,6 +84,18 @@ const MessageListener = () => {
                                 }
                             }
                         }
+                    })
+                    .listen('SocketGroup', (e) => {
+                        if (e.action === 'deleting') {
+                            emit('group.deleting', {
+                                groupId: e.group_id,
+                                is_deleting: e.is_deleting
+                            });
+                        } else if (e.action === 'deleted') {
+                            emit('group.deleted', {
+                                groupId: e.group_id
+                            });
+                        }
                     });
             } else {
                 channelName = `message.user.${[parseInt(user.id), parseInt(conversation.id)].sort((a, b) => a - b).join('-')}`;

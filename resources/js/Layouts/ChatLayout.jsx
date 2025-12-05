@@ -115,10 +115,35 @@ const ChatLayout = ({ children }) => {
             }
         });
 
+        const unsubscribeGroupDeleting = on('group.deleting', ({ groupId, is_deleting }) => {
+            setLocalConversations(prevConversations => {
+                return prevConversations.map(conv => {
+                    if (conv.is_group && conv.id === groupId) {
+                        return {
+                            ...conv,
+                            is_deleting: is_deleting
+                        };
+                    }
+                    return conv;
+                });
+            });
+        });
+
+        const unsubscribeGroupDeleted = on('group.deleted', ({ groupId }) => {
+            // Remove the group from conversations
+            setLocalConversations(prevConversations => {
+                return prevConversations.filter(conv => {
+                    return !(conv.is_group && conv.id === groupId);
+                });
+            });
+        });
+
         return () => {
             unsubscribeReceived();
             unsubscribeUpdated();
             unsubscribeDeleted();
+            unsubscribeGroupDeleting();
+            unsubscribeGroupDeleted();
         };
     }, [on]);
 

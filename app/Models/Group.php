@@ -22,6 +22,7 @@ class Group extends Model
         'avatar',
         'owner_id',
         'last_message_id',
+        'is_deleting',
     ];
 
     public function owner()
@@ -79,6 +80,7 @@ class Group extends Model
             'user_ids' => optional($this->members)->pluck('id') ?? collect(),
             'last_message' => $this->last_message,
             'last_message_date' => $this->last_message_date,
+            'is_deleting' => (bool) $this->is_deleting,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

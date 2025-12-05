@@ -9,13 +9,16 @@ import EmojiPicker from 'emoji-picker-react';
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import { useToast } from '../../Hooks/useToast';
+import { useEventBus } from '@/EventBus';
 
 const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit = null }) => {
   const toast = useToast();
+  const { on, off } = useEventBus();
   
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
+  const [isGroupDeleting, setIsGroupDeleting] = useState(conversation?.is_deleting || false);
 
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
@@ -90,7 +93,6 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
       setMessage(editingMessage.message || '');
     }
   }, [editingMessage]);
-
 
   useEffect(() => {
     return () => {
@@ -202,6 +204,40 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
     }
   }, [message]);
 
+  // Reset deletion state when conversation changes
+  useEffect(() => {
+    setIsGroupDeleting(conversation?.is_deleting || false);
+  }, [conversation]);
+
+  // Listen for group deletion events
+  useEffect(() => {
+    if (!conversation || !conversation.is_group) return;
+
+    const handleGroupDeleting = (data) => {
+      if (data.groupId === conversation.id) {
+        setIsGroupDeleting(true);
+        toast.warning('This group is being deleted...');
+      }
+    };
+
+    const handleGroupDeleted = (data) => {
+      if (data.groupId === conversation.id) {
+        toast.error('This group has been deleted');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      }
+    };
+
+    on('group.deleting', handleGroupDeleting);
+    on('group.deleted', handleGroupDeleted);
+
+    return () => {
+      off('group.deleting', handleGroupDeleting);
+      off('group.deleted', handleGroupDeleted);
+    };
+  }, [conversation, on, off, toast]);
+
   const onEmojiClick = (emojiObject) => {
     setMessage(prevMessage => prevMessage + emojiObject.emoji);
   };
@@ -224,6 +260,16 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
   return (
     <div className='border-t border-gray-200 dark:border-gray-700'>
       
+      {/* Group Deletion Banner */}
+      {isGroupDeleting && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-4 py-3">
+          <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+            <Iconify icon='mdi:alert-circle' className='text-xl animate-pulse' />
+            <span className="text-sm font-medium">This group is being deleted. You cannot send messages.</span>
+          </div>
+        </div>
+      )}
+
       {/* File Previews */}
       {files.length > 0 && (
         <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -339,15 +385,15 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
       <div className='flex flex-wrap items-start py-1'>
         <div className='order-2 flex-1 xs:flex-none xs:order-1 p-2'>
           <button
-            className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'
-            disabled={isSending}
+            className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed'
+            disabled={isSending || isGroupDeleting}
           >
             <Iconify icon='ic:round-attach-file' className='text-base' />
-            <input type="file" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
+            <input type="file" onChange={handleFileChange} multiple disabled={isGroupDeleting} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
           </button>
-          <button className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative'>
+          <button disabled={isGroupDeleting} className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed'>
             <Iconify icon='ic:round-add-photo-alternate' className='text-lg' />
-            <input type="file" accept="image/*" onChange={handleFileChange} multiple className='absolute inset-0 w-full h-full opacity-0 cursor-pointer' />
+            <input type="file" accept="image/*" onChange={handleFileChange} multiple disabled={isGroupDeleting} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
           </button>
         </div>
         <div className='flex-1 order-1 xs:order-2 px-3 xs:px-0 relative min-w-0 basis-full xs:basis-0 py-2'>
@@ -380,8 +426,9 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
                 setError("");
               }}
               onSend={onSendClick}
+              disabled={isGroupDeleting}
             />
-            <Button size='sm' onClickCapture={onSendClick} disabled={isSending} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
+            <Button size='sm' onClickCapture={onSendClick} disabled={isSending || isGroupDeleting} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
               {isSending ? (
                 <>
                   <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
@@ -409,7 +456,7 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
         <div className='flex order-3 xs:order-3 p-2'>
           <VoiceRecorder 
             onVoiceRecorded={handleVoiceRecorded}
-            disabled={isSending}
+            disabled={isSending || isGroupDeleting}
           />
 
           <Popover
@@ -430,7 +477,7 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
               </div>
             }
           >
-            <button className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'>
+            <button disabled={isGroupDeleting} className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed'>
               <Iconify icon='ic:round-mood' className='w-6' />
             </button>
           </Popover>

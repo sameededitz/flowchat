@@ -19,6 +19,34 @@ class MessageController extends Controller
 {
     public function byUser(User $user)
     {
+        // Prevent users from accessing their own chat
+        if ($user->id === Auth::id()) {
+            abort(403, 'You cannot chat with yourself');
+        }
+
+        // Check if a conversation exists between these users
+        $conversationExists = Conversation::where(function ($query) use ($user) {
+            $query->where('user_id1', Auth::id())
+                  ->where('user_id2', $user->id);
+        })->orWhere(function ($query) use ($user) {
+            $query->where('user_id1', $user->id)
+                  ->where('user_id2', Auth::id());
+        })->exists();
+
+        // Or check if there are any messages between them
+        $hasMessages = Message::where(function ($query) use ($user) {
+            $query->where('sender_id', Auth::id())
+                  ->where('receiver_id', $user->id);
+        })->orWhere(function ($query) use ($user) {
+            $query->where('sender_id', $user->id)
+                  ->where('receiver_id', Auth::id());
+        })->exists();
+
+        // If neither conversation nor messages exist, deny access
+        if (!$conversationExists && !$hasMessages) {
+            abort(403, 'No conversation exists with this user');
+        }
+
         $messages = Message::where('sender_id', Auth::id())
             ->where('receiver_id', $user->id)
             ->orWhere(function ($query) use ($user) {
@@ -29,7 +57,6 @@ class MessageController extends Controller
             ->latest()
             ->paginate(10);
 
-        // dd(MessageResource::collection($messages));
 
         return Inertia::render('Home', [
             'selectedConversation' => $user->toConversationArray(),
@@ -39,6 +66,14 @@ class MessageController extends Controller
 
     public function byGroup(Group $group)
     {
+        // Check if user is a member of the group or the owner
+        $isMember = $group->members()->where('user_id', Auth::id())->exists();
+        $isOwner = $group->owner_id === Auth::id();
+
+        if (!$isMember && !$isOwner) {
+            abort(403, 'You are not a member of this group');
+        }
+
         $messages = Message::where('group_id', $group->id)
             ->with(['sender', 'receiver', 'attachments'])
             ->latest()
@@ -86,6 +121,14 @@ class MessageController extends Controller
         $groupId = $data['group_id'] ?? null;
         $files = $data['attachments'] ?? [];
         $voiceMessages = $request->input('voice_messages', []);
+
+        // Check if group is being deleted
+        if ($groupId) {
+            $group = Group::find($groupId);
+            if ($group && $group->is_deleting) {
+                return response()->json(['message' => 'This group is being deleted. You cannot send messages.'], 403);
+            }
+        }
 
         try {
             $message = Message::create($data);

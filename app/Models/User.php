@@ -3,9 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -99,11 +100,13 @@ class User extends Authenticatable
 
     public function toConversationArray()
     {
+        $disk = Storage::disk('profile');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'avatar_url' => null,
+            'avatar_url' => $this->avatar ? $disk->url($this->avatar) : null,
             'is_group' => false,
             'is_user' => true,
             'is_admin' => (bool) $this->is_admin,

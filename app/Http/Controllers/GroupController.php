@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Group;
+use App\Jobs\DeleteGroupJob;
+use App\Events\SocketGroup;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -119,11 +121,20 @@ class GroupController extends Controller
         }
 
         $groupName = $group->name;
-        $group->delete();
+        
+        // Mark group as being deleted
+        $group->update(['is_deleting' => true]);
+        
+        // Broadcast to all members that group is being deleted
+        broadcast(new SocketGroup($group->id, 'deleting', ['is_deleting' => true]))->toOthers();
+        
+        // Dispatch the deletion job to handle all cleanup
+        DeleteGroupJob::dispatch($group);
 
         return response()->json([
             'success' => true,
-            'message' => "Group '$groupName' has been deleted successfully"
+            'message' => "Group '$groupName' is being deleted...",
+            'group' => $group->load(['owner', 'members'])
         ]);
     }
 

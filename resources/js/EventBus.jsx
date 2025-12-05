@@ -23,8 +23,14 @@ export const EventBusProvider = ({ children }) => {
         }
     }
 
+    const off = (event, callback) => {
+        if (events[event]) {
+            events[event] = events[event].filter(cb => cb !== callback);
+        }
+    }
+
     return (
-        <EventBusContext.Provider value={{ emit, on }}>
+        <EventBusContext.Provider value={{ emit, on, off }}>
             {children}
         </EventBusContext.Provider>
     );
