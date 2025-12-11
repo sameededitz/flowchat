@@ -19,6 +19,7 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
   const [isGroupDeleting, setIsGroupDeleting] = useState(conversation?.is_deleting || false);
+  const isBlocked = conversation?.i_blocked || conversation?.blocked_me || false;
 
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
@@ -270,6 +271,20 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
         </div>
       )}
 
+      {/* Blocked User Banner */}
+      {isBlocked && !conversation?.is_group && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-3">
+          <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+            <Iconify icon='mdi:block-helper' className='text-xl' />
+            <span className="text-sm font-medium">
+              {conversation?.i_blocked 
+                ? 'You have blocked this user. Unblock to send messages.' 
+                : 'This user has blocked you. You cannot send messages.'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* File Previews */}
       {files.length > 0 && (
         <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -386,14 +401,14 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
         <div className='order-2 flex-1 xs:flex-none xs:order-1 p-2'>
           <button
             className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed'
-            disabled={isSending || isGroupDeleting}
+            disabled={isSending || isGroupDeleting || isBlocked}
           >
             <Iconify icon='ic:round-attach-file' className='text-base' />
-            <input type="file" onChange={handleFileChange} multiple disabled={isGroupDeleting} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
+            <input type="file" onChange={handleFileChange} multiple disabled={isGroupDeleting || isBlocked} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
           </button>
-          <button disabled={isGroupDeleting} className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed'>
+          <button disabled={isGroupDeleting || isBlocked} className='p-1 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed'>
             <Iconify icon='ic:round-add-photo-alternate' className='text-lg' />
-            <input type="file" accept="image/*" onChange={handleFileChange} multiple disabled={isGroupDeleting} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
+            <input type="file" accept="image/*" onChange={handleFileChange} multiple disabled={isGroupDeleting || isBlocked} className='absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed' />
           </button>
         </div>
         <div className='flex-1 order-1 xs:order-2 px-3 xs:px-0 relative min-w-0 basis-full xs:basis-0 py-2'>
@@ -426,9 +441,9 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
                 setError("");
               }}
               onSend={onSendClick}
-              disabled={isGroupDeleting}
+              disabled={isGroupDeleting || isBlocked}
             />
-            <Button size='sm' onClickCapture={onSendClick} disabled={isSending || isGroupDeleting} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
+            <Button size='sm' onClickCapture={onSendClick} disabled={isSending || isGroupDeleting || isBlocked} className="rounded-s-none bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:bg-gradient-to-bl focus:ring-cyan-300 dark:focus:ring-cyan-800">
               {isSending ? (
                 <>
                   <Iconify icon='fluent:spinner-ios-16-regular' className='animate-spin' />
@@ -456,7 +471,7 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
         <div className='flex order-3 xs:order-3 p-2'>
           <VoiceRecorder 
             onVoiceRecorded={handleVoiceRecorded}
-            disabled={isSending || isGroupDeleting}
+            disabled={isSending || isGroupDeleting || isBlocked}
           />
 
           <Popover
@@ -477,7 +492,7 @@ const MessageInput = ({ conversation = null, editingMessage = null, onCancelEdit
               </div>
             }
           >
-            <button disabled={isGroupDeleting} className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed'>
+            <button disabled={isGroupDeleting || isBlocked} className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed'>
               <Iconify icon='ic:round-mood' className='w-6' />
             </button>
           </Popover>

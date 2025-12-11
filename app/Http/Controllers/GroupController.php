@@ -27,6 +27,25 @@ class GroupController extends Controller
             'user_ids.*' => 'exists:users,id'
         ]);
 
+        $currentUser = Auth::user();
+        
+        // Check for blocked users
+        $blockedUsers = [];
+        foreach ($validated['user_ids'] as $userId) {
+            if ($userId != Auth::id()) {
+                $user = User::find($userId);
+                if ($user && $currentUser->isBlockingOrBlockedBy($user)) {
+                    $blockedUsers[] = $user->name;
+                }
+            }
+        }
+        
+        if (!empty($blockedUsers)) {
+            return response()->json([
+                'message' => 'Cannot add blocked users: ' . implode(', ', $blockedUsers)
+            ], 403);
+        }
+
         // Create the group
         $group = Group::create([
             'name' => $validated['name'],
@@ -54,6 +73,14 @@ class GroupController extends Controller
 
         // Load relationships for response
         $group->load(['owner', 'members']);
+
+        // Broadcast group creation event to all members (including owner)
+        $groupData = $group->toConversationArray();
+        $allMemberIds = array_merge([$group->owner_id], $validated['user_ids']);
+        
+        foreach (array_unique($allMemberIds) as $memberId) {
+            broadcast(new SocketGroup($group->id, 'created', ['group' => $groupData, 'user_id' => $memberId]));
+        }
 
         return response()->json([
             'success' => true,
@@ -162,11 +189,20 @@ class GroupController extends Controller
 
         $addedUsers = [];
         $alreadyMembers = [];
+        $blockedUsers = [];
 
         foreach ($validated['user_ids'] as $userId) {
+            $user = User::find($userId);
+            
+            // Check if user is blocked
+            if ($user && $currentUser->isBlockingOrBlockedBy($user)) {
+                $blockedUsers[] = $user->name;
+                continue;
+            }
+            
             // Check if user is already a member
             if ($group->members()->where('user_id', $userId)->exists()) {
-                $alreadyMembers[] = User::find($userId)->name;
+                $alreadyMembers[] = $user->name;
                 continue;
             }
 
@@ -178,7 +214,7 @@ class GroupController extends Controller
                 'invited_by' => $currentUser->id,
             ]);
 
-            $addedUsers[] = User::find($userId)->name;
+            $addedUsers[] = $user->name;
         }
 
         $message = '';
@@ -186,7 +222,10 @@ class GroupController extends Controller
             $message .= 'Added: ' . implode(', ', $addedUsers) . '. ';
         }
         if (count($alreadyMembers) > 0) {
-            $message .= 'Already members: ' . implode(', ', $alreadyMembers) . '.';
+            $message .= 'Already members: ' . implode(', ', $alreadyMembers) . '. ';
+        }
+        if (count($blockedUsers) > 0) {
+            $message .= 'Cannot add blocked users: ' . implode(', ', $blockedUsers) . '.';
         }
 
         return response()->json([

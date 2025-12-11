@@ -67,6 +67,48 @@ class User extends Authenticatable
         return $this->hasMany(Group::class, 'owner_id');
     }
 
+    /**
+     * Users that this user has blocked
+     */
+    public function blockedUsers()
+    {
+        return $this->belongsToMany(User::class, 'user_blocks', 'blocker_id', 'blocked_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Users that have blocked this user
+     */
+    public function blockedByUsers()
+    {
+        return $this->belongsToMany(User::class, 'user_blocks', 'blocked_id', 'blocker_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if this user has blocked another user
+     */
+    public function hasBlocked(User $user): bool
+    {
+        return $this->blockedUsers()->where('blocked_id', $user->id)->exists();
+    }
+
+    /**
+     * Check if this user is blocked by another user
+     */
+    public function isBlockedBy(User $user): bool
+    {
+        return $this->blockedByUsers()->where('blocker_id', $user->id)->exists();
+    }
+
+    /**
+     * Check if blocking exists in either direction (two-way check)
+     */
+    public function isBlockingOrBlockedBy(User $user): bool
+    {
+        return UserBlock::isBlocked($this->id, $user->id);
+    }
+
     public static function getUsers(User $user)
     {
         $userId = $user->id;
@@ -75,6 +117,8 @@ class User extends Authenticatable
             'messages.message as last_message',
             'messages.created_at as last_message_date',
         ])
+            ->selectRaw('EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id = ? AND blocked_id = users.id) as i_blocked', [$userId])
+            ->selectRaw('EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id = users.id AND blocked_id = ?) as blocked_me', [$userId])
             ->where('users.id', '!=', $userId)
             ->when(!$user->is_admin, function ($query) {
                 $query->whereNull('banned_at')
@@ -117,6 +161,8 @@ class User extends Authenticatable
             'banned_at' => $this->banned_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'i_blocked' => $this->i_blocked ?? false,
+            'blocked_me' => $this->blocked_me ?? false,
         ];
     }
 }

@@ -8,21 +8,21 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class SocketGroup implements ShouldBroadcastNow
+class UserBlocked implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.
-     * 
-     * @param int $groupId - The group ID
-     * @param string $action - The action type: 'deleting', 'deleted', 'updated', etc.
-     * @param array $data - Additional data to broadcast
+     *
+     * @param int $blockerId - ID of the user who blocked
+     * @param int $blockedId - ID of the user who was blocked
+     * @param bool $isBlocked - true for block, false for unblock
      */
     public function __construct(
-        public int $groupId,
-        public string $action = 'updated',
-        public array $data = []
+        public int $blockerId,
+        public int $blockedId,
+        public bool $isBlocked
     )
     {
         //
@@ -35,16 +35,10 @@ class SocketGroup implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        // For 'created' action, broadcast to user-specific channel
-        if ($this->action === 'created' && isset($this->data['user_id'])) {
-            return [
-                new PrivateChannel('user.' . $this->data['user_id']),
-            ];
-        }
-        
-        // For other actions, broadcast to group channel
+        // Broadcast to both users involved
         return [
-            new PrivateChannel('message.group.' . $this->groupId),
+            new PrivateChannel('user.' . $this->blockerId),
+            new PrivateChannel('user.' . $this->blockedId),
         ];
     }
 
@@ -56,9 +50,18 @@ class SocketGroup implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'group_id' => $this->groupId,
-            'action' => $this->action,
-            ...$this->data
+            'blocker_id' => $this->blockerId,
+            'blocked_id' => $this->blockedId,
+            'is_blocked' => $this->isBlocked,
+            'action' => $this->isBlocked ? 'blocked' : 'unblocked',
         ];
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'user.block.status';
     }
 }

@@ -34,6 +34,28 @@ const MessageListener = () => {
 
         const messageChannels = [];
 
+        // Listen to user-specific channel for group invitations and blocking
+        const userChannel = Echo.private(`user.${user.id}`)
+            .listen('SocketGroup', (e) => {
+                if (e.action === 'created' && e.group) {
+                    // New group created - add to conversations
+                    emit('group.created', {
+                        group: e.group
+                    });
+                }
+            })
+            .listen('.user.block.status', (e) => {
+                // User blocking/unblocking event
+                emit('user.block.status', {
+                    blockerId: e.blocker_id,
+                    blockedId: e.blocked_id,
+                    isBlocked: e.is_blocked,
+                    action: e.action
+                });
+            });
+        
+        messageChannels.push({ channelName: `user.${user.id}`, channel: userChannel });
+
         // Listen to all conversation channels in one place
         conversations.forEach(conversation => {
             let channelName;

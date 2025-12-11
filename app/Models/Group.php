@@ -56,7 +56,7 @@ class Group extends Model
                     ->orWhere('groups.owner_id', $user->id);
             })
             ->groupBy('groups.id')
-            ->orderBy('messages.created_at', 'desc')
+            ->orderByRaw('COALESCE(messages.created_at, groups.created_at) desc')
             ->orderBy('groups.name');
 
         return $query->get();

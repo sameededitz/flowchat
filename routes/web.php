@@ -21,6 +21,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // User search and conversation routes
     Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
     Route::post('/conversation/find-or-create', [UserController::class, 'findOrCreateConversation'])->name('conversation.find-or-create');
+    
+    // User blocking routes
+    Route::post('/user/{user}/block', [UserController::class, 'blockUser'])->name('user.block');
+    Route::delete('/user/{user}/block', [UserController::class, 'unblockUser'])->name('user.unblock');
+    Route::delete('/conversation/{user}', [UserController::class, 'deleteConversation'])->name('conversation.delete');
 
     // Group management routes
     Route::post('/group/store', [GroupController::class, 'store'])->name('group.store');

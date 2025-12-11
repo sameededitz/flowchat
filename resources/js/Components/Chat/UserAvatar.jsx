@@ -1,8 +1,10 @@
 import { Avatar } from 'flowbite-react'
 import React from 'react'
 
-const UserAvatar = ({ user, online = null, profile = false, size = null }) => {
-  let onlineStatus = online === true ? 'online' : online === false ? 'offline' : '';
+const UserAvatar = ({ user, online = null, profile = false, size = null, showStatus = true }) => {
+  let onlineStatus = showStatus && online !== null 
+    ? (online === true ? 'online' : 'offline') 
+    : '';
 
   const avatarSize = size || (profile ? 'w-40 h-40' : 'w-8 h-8');
   return (

@@ -6,6 +6,12 @@ Broadcast::channel('online', function ($user) {
     return $user ? new \App\Http\Resources\UserResource($user) : null;
 });
 
+Broadcast::channel('user.{userId}', function ($user, $userId) {
+    return $user && $user->id == $userId
+        ? new \App\Http\Resources\UserResource($user)
+        : null;
+});
+
 Broadcast::channel('group.{groupId}', function ($user, $groupId) {
     // Check if user is a member of the group OR the owner of the group
     $isMember = $user->groups->contains($groupId);

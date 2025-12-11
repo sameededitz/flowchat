@@ -7,6 +7,7 @@ import { Link, usePage } from '@inertiajs/react'
 import { Dropdown, DropdownDivider, DropdownItem, Tooltip } from "flowbite-react";
 import React, { useEffect, useState } from 'react'
 import { useEventBus } from '@/EventBus';
+import UserAvatar from '@/Components/Chat/UserAvatar';
 
 const ChatLayout = ({ children }) => {
     const page = usePage();
@@ -43,11 +44,15 @@ const ChatLayout = ({ children }) => {
                     return -1;
                 }
 
-                if (a.last_message_date && b.last_message_date) {
-                    return b.last_message_date.localeCompare(a.last_message_date);
-                } else if (a.last_message_date) {
+                // Use last_message_date if available, otherwise fall back to created_at
+                const aDate = a.last_message_date || a.created_at;
+                const bDate = b.last_message_date || b.created_at;
+
+                if (aDate && bDate) {
+                    return bDate.localeCompare(aDate);
+                } else if (aDate) {
                     return -1;
-                } else if (b.last_message_date) {
+                } else if (bDate) {
                     return 1;
                 } else {
                     return 0;
@@ -138,14 +143,56 @@ const ChatLayout = ({ children }) => {
             });
         });
 
+        const unsubscribeGroupCreated = on('group.created', ({ group }) => {
+            // Add new group to conversations at the top
+            setLocalConversations(prevConversations => {
+                // Check if group already exists
+                const exists = prevConversations.some(conv => conv.is_group && conv.id === group.id);
+                if (exists) return prevConversations;
+                
+                // Add new group at the beginning
+                return [group, ...prevConversations];
+            });
+        });
+
+        const unsubscribeBlockStatus = on('user.block.status', ({ blockerId, blockedId, isBlocked }) => {
+            // Update blocking status in conversations
+            setLocalConversations(prevConversations => {
+                return prevConversations.map(conv => {
+                    if (!conv.is_group && conv.is_user) {
+                        // Check if this conversation involves the blocked/unblocked user
+                        if (conv.id === blockedId || conv.id === blockerId) {
+                            // If current user is the blocker
+                            if (blockerId === user.id && conv.id === blockedId) {
+                                return {
+                                    ...conv,
+                                    i_blocked: isBlocked
+                                };
+                            }
+                            // If current user is the blocked one
+                            if (blockedId === user.id && conv.id === blockerId) {
+                                return {
+                                    ...conv,
+                                    blocked_me: isBlocked
+                                };
+                            }
+                        }
+                    }
+                    return conv;
+                });
+            });
+        });
+
         return () => {
             unsubscribeReceived();
             unsubscribeUpdated();
             unsubscribeDeleted();
             unsubscribeGroupDeleting();
             unsubscribeGroupDeleted();
+            unsubscribeGroupCreated();
+            unsubscribeBlockStatus();
         };
-    }, [on]);
+    }, [on, user.id]);
 
     const updateConversationWithNewMessage = (conversationId, message, isGroup) => {
         setLocalConversations(prevConversations => {
@@ -196,7 +243,7 @@ const ChatLayout = ({ children }) => {
                                 <Dropdown arrowIcon={false} inline={true} label={
                                     <div className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
                                         <span className="sr-only">Open user menu</span>
-                                        <img className="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg" alt="user photo" />
+                                        <UserAvatar user={user} profile={false} />
                                     </div>
                                 }>
                                     <DropdownItem>

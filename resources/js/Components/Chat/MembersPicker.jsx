@@ -25,11 +25,15 @@ const MembersPicker = ({
             id: c.id, 
             name: c.name,
             email: c.email,
-            avatar_url: c.avatar_url
+            avatar_url: c.avatar_url,
+            i_blocked: c.i_blocked,
+            blocked_me: c.blocked_me
         }))
         .filter(user => 
             user.id !== auth.user.id && // Exclude current user
-            !excludeUserIds.includes(user.id) // Exclude specified users
+            !excludeUserIds.includes(user.id) && // Exclude specified users
+            !user.i_blocked && // Exclude users current user has blocked
+            !user.blocked_me // Exclude users who blocked current user
         ) || [];    // Filter known users based on query
     const filteredKnownUsers = query === '' 
         ? knownUsers 
@@ -58,7 +62,11 @@ const MembersPicker = ({
                 try {
                     setIsSearching(true);
                     const response = await axios.get(`/users/search?query=${query}`);
-                    setSearchResults(response.data);
+                    // Filter out blocked users from search results
+                    const filteredResults = response.data.filter(user => 
+                        !user.i_blocked && !user.blocked_me
+                    );
+                    setSearchResults(filteredResults);
                 } catch (error) {
                     console.error('Search error:', error);
                     setSearchResults([]);
@@ -131,7 +139,7 @@ const MembersPicker = ({
                                                 }`
                                             }
                                         >
-                                            <UserAvatar user={user} online={false} profile={false} />
+                                            <UserAvatar user={user} showStatus={false} />
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-medium text-gray-900 dark:text-white truncate">
                                                     {user.name}
@@ -157,7 +165,7 @@ const MembersPicker = ({
                             key={user.id}
                             className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900 rounded-full"
                         >
-                            <UserAvatar user={user} size="sm" profile={false} />
+                            <UserAvatar user={user} size="sm" showStatus={false} />
                             <span className="text-sm text-gray-900 dark:text-white ms-1">{user.name}</span>
                             <button
                                 type="button"

@@ -6,6 +6,7 @@ use App\Models\User;
 use Inertia\Inertia;
 use App\Models\Group;
 use App\Models\Message;
+use App\Models\UserBlock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Conversation;
@@ -57,9 +58,14 @@ class MessageController extends Controller
             ->latest()
             ->paginate(10);
 
+        // Get blocking status
+        $currentUser = Auth::user();
+        $conversationArray = $user->toConversationArray();
+        $conversationArray['i_blocked'] = $currentUser->hasBlocked($user);
+        $conversationArray['blocked_me'] = $currentUser->isBlockedBy($user);
 
         return Inertia::render('Home', [
-            'selectedConversation' => $user->toConversationArray(),
+            'selectedConversation' => $conversationArray,
             'messages' => MessageResource::collection($messages)->response()->getData(),
         ]);
     }
@@ -121,6 +127,19 @@ class MessageController extends Controller
         $groupId = $data['group_id'] ?? null;
         $files = $data['attachments'] ?? [];
         $voiceMessages = $request->input('voice_messages', []);
+
+        // Check if this is a DM (not a group message)
+        if ($receiverId && !$groupId) {
+            $receiver = User::find($receiverId);
+            $sender = Auth::user();
+
+            // Check if users are blocked (two-way check)
+            if ($receiver && $sender->isBlockingOrBlockedBy($receiver)) {
+                return response()->json([
+                    'message' => 'You cannot send messages to this user.'
+                ], 403);
+            }
+        }
 
         // Check if group is being deleted
         if ($groupId) {

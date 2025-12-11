@@ -138,7 +138,11 @@ const NewConversationModal = ({ show, onClose }) => {
             });
 
             toast.success('Group created successfully');
-            router.visit(route('chat.group', response.data.group.id));
+            // Use reload with preserveScroll to trigger conversations refresh
+            router.visit(route('chat.group', response.data.group.id), {
+                preserveScroll: true,
+                preserveState: false,
+            });
             handleClose();
         } catch (error) {
             console.error('Error creating group:', error);

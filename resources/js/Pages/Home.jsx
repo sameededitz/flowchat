@@ -7,11 +7,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useEventBus } from '@/EventBus'
 import axios from 'axios'
 
-function Home({ messages, selectedConversation }) {
+function Home({ messages, selectedConversation: initialSelectedConversation }) {
     const [localMessages, setLocalMessages] = useState([])
     const [isLoadingOlder, setIsLoadingOlder] = useState(false)
     const [hasMoreMessages, setHasMoreMessages] = useState(true)
     const [editingMessage, setEditingMessage] = useState(null)
+    const [selectedConversation, setSelectedConversation] = useState(initialSelectedConversation)
     const { on } = useEventBus()
 
     const messagesCtrRef = useRef(null);
@@ -48,6 +49,11 @@ function Home({ messages, selectedConversation }) {
             setIsLoadingOlder(false);
         }
     }, [messages])
+
+    // Update selected conversation when it changes
+    useEffect(() => {
+        setSelectedConversation(initialSelectedConversation);
+    }, [initialSelectedConversation])
 
     const loadOlderMessages = async () => {
         if (isLoadingOlder || !hasMoreMessages || localMessages.length === 0) return;
@@ -210,6 +216,24 @@ function Home({ messages, selectedConversation }) {
             if ((isGroup && selectedConversation.is_group && conversationId === selectedConversation.id) ||
                 (!isGroup && !selectedConversation.is_group && conversationId === selectedConversation.id)) {
                 handleMessageDelete(messageId);
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedConversation, on]);
+
+    // Listen for block status changes
+    useEffect(() => {
+        if (!selectedConversation || selectedConversation.is_group) return;
+
+        const unsubscribe = on('user.block.status', ({ blockerId, blockedId, isBlocked }) => {
+            // Update selected conversation if it involves the blocked/unblocked user
+            if (selectedConversation.id === blockedId || selectedConversation.id === blockerId) {
+                setSelectedConversation(prev => ({
+                    ...prev,
+                    i_blocked: selectedConversation.id === blockedId ? isBlocked : prev.i_blocked,
+                    blocked_me: selectedConversation.id === blockerId ? isBlocked : prev.blocked_me
+                }));
             }
         });
 
