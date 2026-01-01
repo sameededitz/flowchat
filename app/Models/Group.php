@@ -43,23 +43,26 @@ class Group extends Model
 
     public static function getGroups(User $user)
     {
-        $query = self::select([
+        return self::select([
             'groups.*',
             'messages.message as last_message',
             'messages.created_at as last_message_date',
         ])
-            ->with(['owner', 'members'])
-            ->leftJoin('group_users', 'group_users.group_id', '=', 'groups.id')
+            ->with(['owner', 'members']) // Keep eager loading
             ->leftJoin('messages', 'messages.id', '=', 'groups.last_message_id')
             ->where(function ($q) use ($user) {
-                $q->where('group_users.user_id', $user->id)
-                    ->orWhere('groups.owner_id', $user->id);
+                $q->where('owner_id', $user->id)
+                  ->orWhereExists(function ($subQuery) use ($user) {
+                      $subQuery->selectRaw(1)
+                          ->from('group_users')
+                          ->where('group_users.group_id', '=', 'groups.id')
+                          ->where('group_users.user_id', $user->id);
+                  });
             })
-            ->groupBy('groups.id')
-            ->orderByRaw('COALESCE(messages.created_at, groups.created_at) desc')
-            ->orderBy('groups.name');
-
-        return $query->get();
+            ->orderByDesc('messages.created_at')
+            ->orderByDesc('groups.created_at')
+            ->orderBy('groups.name')
+            ->get();
     }
 
     public function toConversationArray()

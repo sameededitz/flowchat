@@ -3,48 +3,22 @@ import { FilePond, registerPlugin } from 'react-filepond';
 import FilePondPluginFileValidateSize from 'filepond-plugin-file-validate-size';
 import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
 import FilePondPluginFilePoster from 'filepond-plugin-file-poster';
+import FilePondPluginImageTransform from 'filepond-plugin-image-transform';
+import FilePondPluginImageCrop from 'filepond-plugin-image-crop';
+import FilePondPluginImagePreview from 'filepond-plugin-image-preview';
 import 'filepond/dist/filepond.min.css';
 import 'filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css';
+import 'filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css';
 import { useToast } from '../../Hooks/useToast';
-
-// Import Pintura
-import '@pqina/pintura/pintura.css';
-import {
-    openEditor,
-    locale_en_gb,
-    createDefaultImageReader,
-    createDefaultImageWriter,
-    createDefaultImageOrienter,
-    createDefaultShapePreprocessor,
-    legacyDataToImageState,
-    processImage,
-    setPlugins,
-    plugin_crop,
-    plugin_crop_locale_en_gb,
-    plugin_finetune,
-    plugin_finetune_locale_en_gb,
-    plugin_finetune_defaults,
-    plugin_filter,
-    plugin_filter_locale_en_gb,
-    plugin_filter_defaults,
-    plugin_annotate,
-    plugin_annotate_locale_en_gb,
-    markup_editor_defaults,
-    markup_editor_locale_en_gb,
-} from '@pqina/pintura';
-
-// Import Pintura FilePond plugin
-import FilePondPluginImageEditor from '@pqina/filepond-plugin-image-editor';
-
-// Set Pintura plugins
-setPlugins(plugin_crop, plugin_finetune, plugin_filter, plugin_annotate);
 
 // Register FilePond plugins
 registerPlugin(
     FilePondPluginFileValidateType,
     FilePondPluginFileValidateSize,
     FilePondPluginFilePoster,
-    FilePondPluginImageEditor
+    FilePondPluginImageTransform,
+    FilePondPluginImageCrop,
+    FilePondPluginImagePreview
 );
 
 const AvatarUpload = ({ 
@@ -134,43 +108,27 @@ const AvatarUpload = ({
                     maxFileSize="5MB"
                     labelMaxFileSizeExceeded="File is too large"
                     labelMaxFileSize="Maximum file size is {filesize}"
-                    filePosterMaxHeight={256}
-                    imageEditorWriteImage={true}
-                    imageEditorInstantEdit={false}
-                    imageEditor={{  
-                        legacyDataToImageState: legacyDataToImageState,
-                        createEditor: openEditor,
-                        imageReader: [
-                            createDefaultImageReader,
-                            {}
-                        ],
-                        imageWriter: [
-                            createDefaultImageWriter,
-                            {
-                                targetSize: {
-                                    width: 200,
-                                    height: 200,
-                                },
-                            }
-                        ],
-                        imageProcessor: processImage,
-                        editorOptions: {
-                            utils: ['crop', 'finetune', 'filter', 'annotate'],
-                            imageOrienter: createDefaultImageOrienter(),
-                            shapePreprocessor: createDefaultShapePreprocessor(),
-                            imageCropAspectRatio: 1,
-                            ...plugin_finetune_defaults,
-                            ...plugin_filter_defaults,
-                            ...markup_editor_defaults,
-                            locale: {
-                                ...locale_en_gb,
-                                ...plugin_crop_locale_en_gb,
-                                ...plugin_finetune_locale_en_gb,
-                                ...plugin_filter_locale_en_gb,
-                                ...plugin_annotate_locale_en_gb,
-                                ...markup_editor_locale_en_gb,
-                            },
+                    imagePreviewMaxHeight={256}
+                    imageCropAspectRatio={1}
+                    imageTransformClientTransforms={{
+                        crop: {
+                            aspectRatio: 1,
                         },
+                        resize: {
+                            size: {
+                                width: 200,
+                                height: 200,
+                            },
+                            mode: 'cover',
+                            upscale: false,
+                        },
+                    }}
+                    imageTransformOutputMimeType={'image/png'}
+                    imageTransformOutputQuality={90}
+                    imageTransformOutputStripImageHead={true}
+                    onpreparefile={(fileItem, output) => {
+                        // The file is already processed by FilePond plugins
+                        console.log('File prepared:', fileItem.file.name);
                     }}
                     stylePanelLayout="compact circle"
                     styleImageEditButtonEditItemPosition="bottom center"

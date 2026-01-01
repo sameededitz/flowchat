@@ -3,10 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -112,6 +113,39 @@ class User extends Authenticatable
     public static function getUsers(User $user)
     {
         $userId = $user->id;
+
+        // Simple approach: Get users from messages directly
+        $userIdsFromMessages = DB::table('messages')
+            ->where('sender_id', $userId)
+            ->orWhere('receiver_id', $userId)
+            ->pluck('sender_id')
+            ->merge(DB::table('messages')
+                ->where('sender_id', $userId)
+                ->orWhere('receiver_id', $userId)
+                ->pluck('receiver_id'))
+            ->unique()
+            ->reject($userId);
+
+        // Also get users from conversations table
+        $userIdsFromConversations = DB::table('conversations')
+            ->where('user_id1', $userId)
+            ->orWhere('user_id2', $userId)
+            ->pluck('user_id1')
+            ->merge(DB::table('conversations')
+                ->where('user_id1', $userId)
+                ->orWhere('user_id2', $userId)
+                ->pluck('user_id2'))
+            ->unique()
+            ->reject($userId);
+
+        // Merge both lists
+        $allUserIds = $userIdsFromMessages->merge($userIdsFromConversations)->unique();
+
+        if ($allUserIds->isEmpty()) {
+            return collect();
+        }
+
+        // Now get full user data
         $query = User::select([
             'users.*',
             'messages.message as last_message',
@@ -119,10 +153,10 @@ class User extends Authenticatable
         ])
             ->selectRaw('EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id = ? AND blocked_id = users.id) as i_blocked', [$userId])
             ->selectRaw('EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id = users.id AND blocked_id = ?) as blocked_me', [$userId])
-            ->where('users.id', '!=', $userId)
-            ->when(!$user->is_admin, function ($query) {
-                $query->whereNull('banned_at')
-                    ->whereNull('blocked_at');
+            ->whereIn('users.id', $allUserIds)
+            ->when(! $user->is_admin, function ($query) {
+                $query->whereNull('users.banned_at')
+                    ->whereNull('users.blocked_at');
             })
             ->leftJoin('conversations', function ($join) use ($userId) {
                 $join->on('conversations.user_id1', '=', 'users.id')
@@ -133,12 +167,9 @@ class User extends Authenticatable
                     });
             })
             ->leftJoin('messages', 'messages.id', '=', 'conversations.last_message_id')
-            ->orderByRaw('IFNULL(users.blocked_at, 1)')
-            ->orderByRaw('IFNULL(users.banned_at, 1)')
             ->orderByDesc('messages.created_at')
             ->orderBy('users.name');
 
-        // dd($query->toSql(), $query->getBindings());
         return $query->get();
     }
 
