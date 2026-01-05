@@ -8,10 +8,12 @@ import { Dropdown, DropdownDivider, DropdownItem, Tooltip } from "flowbite-react
 import React, { useEffect, useState } from 'react'
 import { useEventBus } from '@/EventBus';
 import UserAvatar from '@/Components/Chat/UserAvatar';
+import { useToast } from '@/Hooks/useToast';
 
 const ChatLayout = ({ children }) => {
     const page = usePage();
     const { on } = useEventBus();
+    const toast = useToast();
 
     const user = page.props.auth.user;
     const conversations = page.props.conversations;
@@ -149,9 +151,28 @@ const ChatLayout = ({ children }) => {
                 // Check if group already exists
                 const exists = prevConversations.some(conv => conv.is_group && conv.id === group.id);
                 if (exists) return prevConversations;
-                
+
                 // Add new group at the beginning
                 return [group, ...prevConversations];
+            });
+        });
+
+        const unsubscribeGroupUserLeft = on('group.user.left', ({ groupId, userId, userName }) => {
+            // Update the group's member count in the conversation list
+            setLocalConversations(prevConversations => {
+                return prevConversations.map(conv => {
+                    if (conv.is_group && conv.id === groupId) {
+                        // Update member count
+                        const updatedConv = { ...conv };
+                        if (updatedConv.users) {
+                            updatedConv.users = updatedConv.users.filter(u => u.id !== userId);
+                        }
+                        // Show toast notification
+                        toast.info(`${userName} left the group`);
+                        return updatedConv;
+                    }
+                    return conv;
+                });
             });
         });
 
@@ -190,6 +211,7 @@ const ChatLayout = ({ children }) => {
             unsubscribeGroupDeleting();
             unsubscribeGroupDeleted();
             unsubscribeGroupCreated();
+            unsubscribeGroupUserLeft();
             unsubscribeBlockStatus();
         };
     }, [on, user.id]);
@@ -215,13 +237,13 @@ const ChatLayout = ({ children }) => {
         <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900">
             {/* Global Message Listener */}
             <MessageListener />
-            
+
             {/* New Conversation Modal */}
-            <NewConversationModal 
-                show={showNewConversationModal} 
-                onClose={() => setShowNewConversationModal(false)} 
+            <NewConversationModal
+                show={showNewConversationModal}
+                onClose={() => setShowNewConversationModal(false)}
             />
-            
+
             {/* Navbar */}
             <nav className="w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-3 py-3 lg:px-5 lg:pl-3">
@@ -241,7 +263,7 @@ const ChatLayout = ({ children }) => {
                         <div className="flex items-center">
                             <div className="flex items-center ms-3">
                                 <Dropdown arrowIcon={false} inline={true} label={
-                                    <div className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
+                                    <div className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600 w-10 h-10">
                                         <span className="sr-only">Open user menu</span>
                                         <UserAvatar user={user} profile={false} />
                                     </div>
@@ -250,10 +272,16 @@ const ChatLayout = ({ children }) => {
                                         <Iconify icon="mdi:home" className="w-4 h-4 me-2" />
                                         Dashboard
                                     </DropdownItem>
+                                    <DropdownItem>
+                                        <Link href={route('profile.edit')}>
+                                            <Iconify icon="iconoir:profile-circle" className="w-4 h-4 me-2" />
+                                            Profile
+                                        </Link>
+                                    </DropdownItem>
                                     <DropdownDivider />
                                     <DropdownItem>
                                         <Link
-                                            href={route('logout')} 
+                                            href={route('logout')}
                                             method="post"
                                             className="flex items-center w-full"
                                         >
@@ -277,7 +305,7 @@ const ChatLayout = ({ children }) => {
                     <div className="flex items-center justify-between py-2 px-3 text-xl font-medium">
                         <span>Conversations</span>
                         <Tooltip content="New Conversation or Group">
-                            <button 
+                            <button
                                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                                 onClick={() => setShowNewConversationModal(true)}
                             >

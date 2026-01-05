@@ -8,7 +8,6 @@ import { useToast } from '../../Hooks/useToast';
 function UserOptions({ conversation }) {
   const isBlocked = conversation.i_blocked || false;
   const toast = useToast();
-  const page = usePage();
 
   const handleBlockUser = () => {
     if (!conversation.is_user) {

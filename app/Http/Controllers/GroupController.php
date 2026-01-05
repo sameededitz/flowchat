@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Group;
-use App\Jobs\DeleteGroupJob;
 use App\Events\SocketGroup;
-use Illuminate\Support\Str;
+use App\Jobs\DeleteGroupJob;
+use App\Models\Group;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GroupController extends Controller
 {
@@ -24,11 +24,11 @@ class GroupController extends Controller
             'description' => 'nullable|string|max:500',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
             'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'exists:users,id'
+            'user_ids.*' => 'exists:users,id',
         ]);
 
         $currentUser = Auth::user();
-        
+
         // Check for blocked users
         $blockedUsers = [];
         foreach ($validated['user_ids'] as $userId) {
@@ -39,10 +39,10 @@ class GroupController extends Controller
                 }
             }
         }
-        
-        if (!empty($blockedUsers)) {
+
+        if (! empty($blockedUsers)) {
             return response()->json([
-                'message' => 'Cannot add blocked users: ' . implode(', ', $blockedUsers)
+                'message' => 'Cannot add blocked users: '.implode(', ', $blockedUsers),
             ], 403);
         }
 
@@ -56,7 +56,7 @@ class GroupController extends Controller
         // Handle avatar upload if provided
         if ($request->hasFile('avatar')) {
             $avatarFile = $request->file('avatar');
-            $filename = 'group_' . $group->id . '_' . time() . '.' . $avatarFile->getClientOriginalExtension();
+            $filename = 'group_'.$group->id.'_'.time().'.'.$avatarFile->getClientOriginalExtension();
             $storedPath = $avatarFile->storeAs('', $filename, 'profile');
             $group->update(['avatar' => $storedPath]);
         }
@@ -77,7 +77,7 @@ class GroupController extends Controller
         // Broadcast group creation event to all members (including owner)
         $groupData = $group->toConversationArray();
         $allMemberIds = array_merge([$group->owner_id], $validated['user_ids']);
-        
+
         foreach (array_unique($allMemberIds) as $memberId) {
             broadcast(new SocketGroup($group->id, 'created', ['group' => $groupData, 'user_id' => $memberId]));
         }
@@ -85,7 +85,7 @@ class GroupController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Group created successfully',
-            'group' => $group
+            'group' => $group,
         ]);
     }
 
@@ -95,14 +95,14 @@ class GroupController extends Controller
     public function update(Request $request, Group $group)
     {
         $currentUser = Auth::user();
-        
-        // Check if user is the owner or admin
-        $canEdit = $group->owner_id === $currentUser->id || 
-                   $group->members()->where('user_id', $currentUser->id)
-                         ->where('role', 'admin')
-                         ->exists();
 
-        if (!$canEdit) {
+        // Check if user is the owner or admin
+        $canEdit = $group->owner_id === $currentUser->id ||
+                   $group->members()->where('user_id', $currentUser->id)
+                       ->where('role', 'admin')
+                       ->exists();
+
+        if (! $canEdit) {
             return response()->json(['error' => 'Only the group owner or admins can edit group information'], 403);
         }
 
@@ -120,10 +120,10 @@ class GroupController extends Controller
             if ($group->avatar) {
                 Storage::disk('profile')->delete($group->avatar);
             }
-            
+
             // Store new avatar
             $avatarFile = $request->file('avatar');
-            $filename = Str::random(10) . '.' . $avatarFile->getClientOriginalExtension();
+            $filename = Str::random(10).'.'.$avatarFile->getClientOriginalExtension();
             $storedPath = $avatarFile->storeAs('', $filename, 'profile');
             $validated['avatar'] = $storedPath;
         }
@@ -133,7 +133,7 @@ class GroupController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Group updated successfully',
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
         ]);
     }
 
@@ -148,20 +148,20 @@ class GroupController extends Controller
         }
 
         $groupName = $group->name;
-        
+
         // Mark group as being deleted
         $group->update(['is_deleting' => true]);
-        
+
         // Broadcast to all members that group is being deleted
         broadcast(new SocketGroup($group->id, 'deleting', ['is_deleting' => true]))->toOthers();
-        
+
         // Dispatch the deletion job to handle all cleanup
         DeleteGroupJob::dispatch($group);
 
         return response()->json([
             'success' => true,
             'message' => "Group '$groupName' is being deleted...",
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
         ]);
     }
 
@@ -171,14 +171,14 @@ class GroupController extends Controller
     public function invite(Request $request, Group $group)
     {
         $currentUser = Auth::user();
-        
-        // Check if user has permission to invite (owner, admin, or moderator)
-        $canInvite = $group->owner_id === $currentUser->id || 
-                     $group->members()->where('user_id', $currentUser->id)
-                           ->whereIn('role', ['admin', 'moderator'])
-                           ->exists();
 
-        if (!$canInvite) {
+        // Check if user has permission to invite (owner, admin, or moderator)
+        $canInvite = $group->owner_id === $currentUser->id ||
+                     $group->members()->where('user_id', $currentUser->id)
+                         ->whereIn('role', ['admin', 'moderator'])
+                         ->exists();
+
+        if (! $canInvite) {
             return response()->json(['error' => 'You do not have permission to invite members'], 403);
         }
 
@@ -193,16 +193,18 @@ class GroupController extends Controller
 
         foreach ($validated['user_ids'] as $userId) {
             $user = User::find($userId);
-            
+
             // Check if user is blocked
             if ($user && $currentUser->isBlockingOrBlockedBy($user)) {
                 $blockedUsers[] = $user->name;
+
                 continue;
             }
-            
+
             // Check if user is already a member
             if ($group->members()->where('user_id', $userId)->exists()) {
                 $alreadyMembers[] = $user->name;
+
                 continue;
             }
 
@@ -217,21 +219,40 @@ class GroupController extends Controller
             $addedUsers[] = $user->name;
         }
 
+        // Broadcast to newly added users
+        if (count($addedUsers) > 0) {
+            $groupData = $group->load(['owner', 'members'])->toConversationArray();
+
+            // Get the IDs of newly added users
+            $addedUserIds = [];
+            foreach ($validated['user_ids'] as $userId) {
+                $user = User::find($userId);
+                if ($user && ! in_array($user->name, $alreadyMembers) && ! in_array($user->name, $blockedUsers)) {
+                    $addedUserIds[] = $userId;
+                }
+            }
+
+            // Broadcast group.created event to new members so they see it in their list
+            foreach ($addedUserIds as $memberId) {
+                broadcast(new SocketGroup($group->id, 'created', ['group' => $groupData, 'user_id' => $memberId]));
+            }
+        }
+
         $message = '';
         if (count($addedUsers) > 0) {
-            $message .= 'Added: ' . implode(', ', $addedUsers) . '. ';
+            $message .= 'Added: '.implode(', ', $addedUsers).'. ';
         }
         if (count($alreadyMembers) > 0) {
-            $message .= 'Already members: ' . implode(', ', $alreadyMembers) . '. ';
+            $message .= 'Already members: '.implode(', ', $alreadyMembers).'. ';
         }
         if (count($blockedUsers) > 0) {
-            $message .= 'Cannot add blocked users: ' . implode(', ', $blockedUsers) . '.';
+            $message .= 'Cannot add blocked users: '.implode(', ', $blockedUsers).'.';
         }
 
         return response()->json([
             'success' => true,
             'message' => trim($message),
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
         ]);
     }
 
@@ -246,7 +267,7 @@ class GroupController extends Controller
         }
 
         // Check if user is a member
-        if (!$group->members()->where('user_id', $user->id)->exists()) {
+        if (! $group->members()->where('user_id', $user->id)->exists()) {
             return response()->json(['error' => 'User is not a member of this group'], 404);
         }
 
@@ -266,7 +287,7 @@ class GroupController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Updated {$user->name}'s role to {$validated['role']}",
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
         ]);
     }
 
@@ -276,14 +297,14 @@ class GroupController extends Controller
     public function removeMember(Group $group, User $user)
     {
         $currentUser = Auth::user();
-        
-        // Check if requester has permission (owner, admin, or moderator)
-        $canRemove = $group->owner_id === $currentUser->id || 
-                     $group->members()->where('user_id', $currentUser->id)
-                           ->whereIn('role', ['admin', 'moderator'])
-                           ->exists();
 
-        if (!$canRemove) {
+        // Check if requester has permission (owner, admin, or moderator)
+        $canRemove = $group->owner_id === $currentUser->id ||
+                     $group->members()->where('user_id', $currentUser->id)
+                         ->whereIn('role', ['admin', 'moderator'])
+                         ->exists();
+
+        if (! $canRemove) {
             return response()->json(['error' => 'You do not have permission to remove members'], 403);
         }
 
@@ -293,7 +314,7 @@ class GroupController extends Controller
         }
 
         // Check if user is a member
-        if (!$group->members()->where('user_id', $user->id)->exists()) {
+        if (! $group->members()->where('user_id', $user->id)->exists()) {
             return response()->json(['error' => 'User is not a member of this group'], 404);
         }
 
@@ -302,7 +323,7 @@ class GroupController extends Controller
         return response()->json([
             'success' => true,
             'message' => "{$user->name} has been removed from the group",
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
         ]);
     }
 
@@ -312,14 +333,14 @@ class GroupController extends Controller
     public function transferOwnership(Group $group, User $user)
     {
         $currentUser = Auth::user();
-        
+
         // Only the current owner can transfer ownership
         if ($group->owner_id !== $currentUser->id) {
             return response()->json(['error' => 'Only the group owner can transfer ownership'], 403);
         }
 
         // Check if target user is a member of the group
-        if (!$group->members()->where('user_id', $user->id)->exists()) {
+        if (! $group->members()->where('user_id', $user->id)->exists()) {
             return response()->json(['error' => 'User must be a member of the group to become owner'], 404);
         }
 
@@ -330,16 +351,16 @@ class GroupController extends Controller
 
         // Start transaction
         DB::beginTransaction();
-        
+
         try {
             // Update group owner
             $group->update(['owner_id' => $user->id]);
-            
+
             // Make the new owner an admin (if they weren't already)
             $group->members()->updateExistingPivot($user->id, ['role' => 'admin']);
-            
+
             // Add the old owner as an admin member if they weren't already a member
-            if (!$group->members()->where('user_id', $currentUser->id)->exists()) {
+            if (! $group->members()->where('user_id', $currentUser->id)->exists()) {
                 $group->members()->attach($currentUser->id, [
                     'role' => 'admin',
                     'is_active' => true,
@@ -350,17 +371,18 @@ class GroupController extends Controller
                 // Update their role to admin
                 $group->members()->updateExistingPivot($currentUser->id, ['role' => 'admin']);
             }
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Ownership of '{$group->name}' has been transferred to {$user->name}",
-                'group' => $group->load(['owner', 'members'])
+                'group' => $group->load(['owner', 'members']),
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollback();
+
             return response()->json(['error' => 'Failed to transfer ownership'], 500);
         }
     }
@@ -371,32 +393,69 @@ class GroupController extends Controller
     public function removeAvatar(Group $group)
     {
         $currentUser = Auth::user();
-        
-        // Check if user is the owner or admin
-        $canEdit = $group->owner_id === $currentUser->id || 
-                   $group->members()->where('user_id', $currentUser->id)
-                         ->where('role', 'admin')
-                         ->exists();
 
-        if (!$canEdit) {
+        // Check if user is the owner or admin
+        $canEdit = $group->owner_id === $currentUser->id ||
+                   $group->members()->where('user_id', $currentUser->id)
+                       ->where('role', 'admin')
+                       ->exists();
+
+        if (! $canEdit) {
             return response()->json(['error' => 'Only the group owner or admins can remove group avatar'], 403);
         }
 
-        if (!$group->avatar) {
+        if (! $group->avatar) {
             return response()->json(['error' => 'Group has no avatar to remove'], 400);
         }
 
         // Delete avatar file
-        $avatarPath = str_replace(config('app.url') . '/storage/profile/', '', $group->avatar);
+        $avatarPath = str_replace(config('app.url').'/storage/profile/', '', $group->avatar);
         \Storage::disk('profile')->delete($avatarPath);
-        
+
         // Update group record
         $group->update(['avatar' => null]);
 
         return response()->json([
             'success' => true,
             'message' => 'Group avatar removed successfully',
-            'group' => $group->load(['owner', 'members'])
+            'group' => $group->load(['owner', 'members']),
+        ]);
+    }
+
+    /**
+     * Leave a group
+     */
+    public function leave(Group $group)
+    {
+        $user = Auth::user();
+        
+        // Check if user is the owner
+        if ($group->owner_id === $user->id) {
+            return response()->json([
+                'error' => 'Group owners cannot leave their own group. You must transfer ownership or delete the group.'
+            ], 403);
+        }
+        
+        // Check if user is a member
+        $isMember = $group->members()->where('user_id', $user->id)->exists();
+        
+        if (!$isMember) {
+            return response()->json(['error' => 'You are not a member of this group'], 404);
+        }
+        
+        // Remove user from group
+        $group->members()->detach($user->id);
+        
+        // Broadcast the user left
+        broadcast(new SocketGroup(
+            $group->id, 
+            'user_left', 
+            ['user_id' => $user->id, 'user_name' => $user->name]
+        ))->toOthers();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'You have left the group successfully'
         ]);
     }
 }

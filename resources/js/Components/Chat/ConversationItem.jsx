@@ -3,6 +3,7 @@ import React from 'react'
 import UserAvatar from './UserAvatar';
 import GroupAvatar from './GroupAvatar';
 import UserOptions from './UserOptions';
+import GroupOptions from './GroupOptions';
 import { formatMessageDateLong } from '@/Helpers/Date';
 
 const ConversationItem = ({ conversation, online, selectedConversation = null }) => {
@@ -62,7 +63,11 @@ const ConversationItem = ({ conversation, online, selectedConversation = null })
           </p>
         )}
       </div>
-      <UserOptions conversation={conversation} />
+      {conversation.is_user ? (
+        <UserOptions conversation={conversation} />
+      ) : (
+        <GroupOptions conversation={conversation} />
+      )}
     </div>
   )
 }

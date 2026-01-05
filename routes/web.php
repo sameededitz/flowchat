@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Group management routes
     Route::post('/group/store', [GroupController::class, 'store'])->name('group.store');
+    Route::post('/group/{group}/leave', [GroupController::class, 'leave'])->name('group.leave');
     Route::patch('/group/{group}', [GroupController::class, 'update'])->name('group.update');
     Route::delete('/group/{group}', [GroupController::class, 'destroy'])->name('group.destroy');
     Route::post('/group/{group}/invite', [GroupController::class, 'invite'])->name('group.invite');

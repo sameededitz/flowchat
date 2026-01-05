@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FilePond, registerPlugin } from 'react-filepond';
-import FilePondPluginFileValidateSize from 'filepond-plugin-file-validate-size';
 import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
+import FilePondPluginFileValidateSize from 'filepond-plugin-file-validate-size';
 import FilePondPluginFilePoster from 'filepond-plugin-file-poster';
-import FilePondPluginImageTransform from 'filepond-plugin-image-transform';
-import FilePondPluginImageCrop from 'filepond-plugin-image-crop';
 import FilePondPluginImagePreview from 'filepond-plugin-image-preview';
 import 'filepond/dist/filepond.min.css';
 import 'filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css';
@@ -16,14 +14,12 @@ registerPlugin(
     FilePondPluginFileValidateType,
     FilePondPluginFileValidateSize,
     FilePondPluginFilePoster,
-    FilePondPluginImageTransform,
-    FilePondPluginImageCrop,
     FilePondPluginImagePreview
 );
 
-const AvatarUpload = ({ 
-    existingAvatar = null, 
-    onFilesChange, 
+const AvatarUpload = ({
+    existingAvatar = null,
+    onFilesChange,
     onRemoveAvatar,
     isOpen = false,
     size = "w-48"
@@ -52,18 +48,18 @@ const AvatarUpload = ({
         setAvatarFiles(files);
         onFilesChange(files);
     };
-
-    const handleRemoveClick = () => {
-        setAvatarFiles([]);
-        onFilesChange([]);
-        if (existingAvatar && onRemoveAvatar) {
-            onRemoveAvatar();
-        }
-    };
-
+    
     const handleRemoveFile = (error, file) => {
         // Reset the files when a file is removed due to error
         setAvatarFiles([]);
+        onFilesChange([]);
+    };
+
+    const handleRemoveClick = () => {
+        setAvatarFiles([]);
+        if (existingAvatar && onRemoveAvatar) {
+            onRemoveAvatar();
+        }
         onFilesChange([]);
     };
 
@@ -109,33 +105,10 @@ const AvatarUpload = ({
                     labelMaxFileSizeExceeded="File is too large"
                     labelMaxFileSize="Maximum file size is {filesize}"
                     imagePreviewMaxHeight={256}
-                    imageCropAspectRatio={1}
-                    imageTransformClientTransforms={{
-                        crop: {
-                            aspectRatio: 1,
-                        },
-                        resize: {
-                            size: {
-                                width: 200,
-                                height: 200,
-                            },
-                            mode: 'cover',
-                            upscale: false,
-                        },
-                    }}
-                    imageTransformOutputMimeType={'image/png'}
-                    imageTransformOutputQuality={90}
-                    imageTransformOutputStripImageHead={true}
-                    onpreparefile={(fileItem, output) => {
-                        // The file is already processed by FilePond plugins
-                        console.log('File prepared:', fileItem.file.name);
-                    }}
                     stylePanelLayout="compact circle"
-                    styleImageEditButtonEditItemPosition="bottom center"
+                    styleButtonRemoveItemPosition="center bottom"
                     styleLoadIndicatorPosition="center bottom"
                     styleProgressIndicatorPosition="right bottom"
-                    styleButtonRemoveItemPosition="left bottom"
-                    styleButtonProcessItemPosition="right bottom"
                     server={{
                         load: (source, load, error, progress, abort) => {
                             fetch(source)

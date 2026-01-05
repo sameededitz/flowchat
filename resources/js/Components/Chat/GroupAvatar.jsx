@@ -21,12 +21,11 @@ const GroupAvatar = ({ group, size = 'md', showRemove = false, onRemove = null }
   };
 
   return (
-    <div className="relative">
+    <div className={`${sizeClasses[size]} relative rounded-full overflow-hidden`}>
       <Avatar 
         img={getGroupAvatar()}
         rounded 
-        size={size}
-        className={sizeClasses[size]}
+        className="w-full h-full"
       />
       {showRemove && group?.avatar && onRemove && (
         <button

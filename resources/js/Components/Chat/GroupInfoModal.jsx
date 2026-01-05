@@ -230,7 +230,7 @@ const GroupInfoModal = ({ show, onClose, group }) => {
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">Group Owner</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <UserAvatar user={group.owner} online={false} profile={false} />
+                                        <UserAvatar user={group.owner} online={false} profile={false} size="w-8 h-8" />
                                         <span className="text-sm text-gray-600 dark:text-gray-400">
                                             {group.owner?.name}
                                             {group.owner_id === currentUser.id && (

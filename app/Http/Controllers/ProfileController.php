@@ -8,6 +8,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,13 +31,40 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user = $request->user();
+        $validated = $request->validated();
+        
+        // Handle avatar removal using separate key
+        if ($request->has('remove_avatar')) {
+            // Delete old avatar if exists
+            if ($user->avatar) {
+                Storage::disk('profile')->delete($user->avatar);
+            }
+            $user->avatar = null;
+        }
+        // Handle avatar upload
+        elseif ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($user->avatar) {
+                Storage::disk('profile')->delete($user->avatar);
+            }
+            
+            // Store new avatar
+            $avatarFile = $request->file('avatar');
+            $filename = Str::random(10) . '.' . $avatarFile->getClientOriginalExtension();
+            $storedPath = $avatarFile->storeAs('', $filename, 'profile');
+            $user->avatar = $storedPath;
         }
 
-        $request->user()->save();
+        // Update other fields
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit');
     }

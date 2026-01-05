@@ -21,9 +21,9 @@ const ConversationHeader = ({ selectedConversation }) => {
                             <Iconify icon="mdi:arrow-left" className='h-6 w-6 text-gray-500 dark:text-gray-400' />
                         </Link>
                         {selectedConversation.is_user && (
-                            <UserAvatar user={selectedConversation} />
+                            <UserAvatar user={selectedConversation} size="w-10 h-10" />
                         )}
-                        {selectedConversation.is_group && <GroupAvatar group={selectedConversation} size='sm' />}
+                        {selectedConversation.is_group && <GroupAvatar group={selectedConversation} size='md' />}
                         <div>
                             <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
                                 {selectedConversation.name}

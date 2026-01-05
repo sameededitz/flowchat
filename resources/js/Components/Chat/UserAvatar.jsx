@@ -6,13 +6,27 @@ const UserAvatar = ({ user, online = null, profile = false, size = null, showSta
     ? (online === true ? 'online' : 'offline') 
     : '';
 
-  const avatarSize = size || (profile ? 'w-40 h-40' : 'w-8 h-8');
+  // Only apply size if provided, otherwise let parent control it
+  const avatarSize = size || '';
+  
   return (
     <>
-      {user.avatar_url ? (
-        <Avatar rounded img={user.avatar_url} alt={user.name} status={onlineStatus} statusPosition="top-right" className={avatarSize} />
+      {avatarSize ? (
+        <div className={`${avatarSize} rounded-full overflow-hidden`}>
+          {user.avatar_url ? (
+            <Avatar rounded img={user.avatar_url} alt={user.name} status={onlineStatus} statusPosition="top-right" className="w-full h-full" />
+          ) : (
+            <Avatar rounded img={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&rounded=true&size=64`} status={onlineStatus} statusPosition="top-right" alt={user.name} placeholderInitials={user.name.substring(0,1)} className="w-full h-full" />
+          )}
+        </div>
       ) : (
-        <Avatar rounded img={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&rounded=true&size=64`} status={onlineStatus} statusPosition="top-right" alt={user.name} placeholderInitials={user.name.substring(0,1)} className={avatarSize} />
+        <>
+          {user.avatar_url ? (
+            <Avatar rounded img={user.avatar_url} alt={user.name} status={onlineStatus} statusPosition="top-right" className="w-full h-full" />
+          ) : (
+            <Avatar rounded img={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&rounded=true&size=64`} status={onlineStatus} statusPosition="top-right" alt={user.name} placeholderInitials={user.name.substring(0,1)} className="w-full h-full" />
+          )}
+        </>
       )}
     </>
   )

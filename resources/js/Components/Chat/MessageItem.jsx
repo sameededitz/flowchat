@@ -8,7 +8,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 
-const MessageItem = ({ message, onEditMessage }) => {
+const MessageItem = ({ message, onEditMessage, isGroup = false }) => {
   const user = usePage().props.auth.user;
   const [copiedIndex, setCopiedIndex] = useState(null);
 
@@ -76,7 +76,12 @@ const MessageItem = ({ message, onEditMessage }) => {
 
   return (
     <div className={`group flex items-start gap-2.5 mb-4 ${isSender ? 'flex-row-reverse' : ''}`}>
-      <UserAvatar user={message.sender} />
+      {/* Only show avatar for group conversations */}
+      {isGroup && (
+        <div className="flex-shrink-0">
+          <UserAvatar user={message.sender} size="w-8 h-8" />
+        </div>
+      )}
 
       <div className={`flex flex-col gap-1 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl ${isSender ? 'items-end' : 'items-start'}`}>
         {/* Name + Time + Actions */}

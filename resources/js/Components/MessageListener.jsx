@@ -117,6 +117,12 @@ const MessageListener = () => {
                             emit('group.deleted', {
                                 groupId: e.group_id
                             });
+                        } else if (e.action === 'user_left') {
+                            emit('group.user.left', {
+                                groupId: e.group_id,
+                                userId: e.user_id,
+                                userName: e.user_name
+                            });
                         }
                     });
             } else {

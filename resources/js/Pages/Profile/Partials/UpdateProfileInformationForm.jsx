@@ -4,6 +4,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
+import AvatarUpload from '@/Components/Chat/AvatarUpload';
+import { useState, useRef } from 'react';
 
 export default function UpdateProfileInformation({
     mustVerifyEmail,
@@ -11,17 +13,55 @@ export default function UpdateProfileInformation({
     className = '',
 }) {
     const user = usePage().props.auth.user;
+    const { props } = usePage();
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({
             name: user.name,
             email: user.email,
+            avatar: null,
         });
+
+    // Use a ref to track removal intent across re-renders
+    const shouldRemoveAvatar = useRef(false);
+    // Track the current avatar URL
+    const [currentAvatar, setCurrentAvatar] = useState(user.avatar_url);
+
+    const handleAvatarChange = (files) => {
+        // Only reset if we're not removing avatar
+        if (!shouldRemoveAvatar.current) {
+            setData('avatar', files.length > 0 ? files[0].file : null);
+        }
+        
+        // Clear removal flag if a new file is selected
+        if (files.length > 0) {
+            shouldRemoveAvatar.current = false;
+        }
+    };
+
+    const handleRemoveAvatar = () => {
+        shouldRemoveAvatar.current = true;
+        setData('avatar', null);
+        setData('remove_avatar', '1');
+        setCurrentAvatar(null);
+    };
 
     const submit = (e) => {
         e.preventDefault();
 
-        patch(route('profile.update'));
+        patch(route('profile.update'), {
+            forceFormData: true,
+            onSuccess: (page) => {
+                // Update the current avatar URL from the response
+                if (page.props.auth.user.avatar_url) {
+                    setCurrentAvatar(page.props.auth.user.avatar_url);
+                } else {
+                    setCurrentAvatar(null);
+                }
+                // Reset the flag after successful submission
+                shouldRemoveAvatar.current = false;
+            },
+        });
     };
 
     return (
@@ -37,6 +77,22 @@ export default function UpdateProfileInformation({
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
+                <div>
+                    <InputLabel value="Profile Avatar" />
+                    
+                    <div className="mt-3">
+                        <AvatarUpload
+                            existingAvatar={currentAvatar}
+                            onFilesChange={handleAvatarChange}
+                            onRemoveAvatar={handleRemoveAvatar}
+                            isOpen={true}
+                            size="w-32"
+                        />
+                    </div>
+                    
+                    <InputError className="mt-2" message={errors.avatar} />
+                </div>
+
                 <div>
                     <InputLabel htmlFor="name" value="Name" />
 
@@ -111,3 +167,4 @@ export default function UpdateProfileInformation({
         </section>
     );
 }
+

@@ -240,6 +240,26 @@ function Home({ messages, selectedConversation: initialSelectedConversation }) {
         return unsubscribe;
     }, [selectedConversation, on]);
 
+    useEffect(() => {
+        if (!selectedConversation || !selectedConversation.is_group) return;
+
+        const unsubscribe = on('group.user.left', ({ groupId, userId }) => {
+            if (selectedConversation.id === groupId) {
+                setSelectedConversation(prev => {
+                    if (prev?.users) {
+                        return {
+                            ...prev,
+                            users: prev.users.filter(u => u.id !== userId)
+                        };
+                    }
+                    return prev;
+                });
+            }
+        });
+
+        return unsubscribe;
+    }, [selectedConversation, on]);
+
     return (
         <>
             {!messages && (
@@ -287,6 +307,7 @@ function Home({ messages, selectedConversation: initialSelectedConversation }) {
                                     key={message.id} 
                                     message={message}
                                     onEditMessage={(msg) => setEditingMessage(msg)}
+                                    isGroup={selectedConversation?.is_group}
                                 />
                             ))
                         ) : (

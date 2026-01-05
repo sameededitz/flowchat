@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 
 class Group extends Model
 {
@@ -43,23 +44,33 @@ class Group extends Model
 
     public static function getGroups(User $user)
     {
+        // First, let's get groups where user is a member directly
+        $groupIds = DB::table('group_users')
+            ->where('user_id', $user->id)
+            ->pluck('group_id')
+            ->toArray();
+            
+        // Also add groups where user is owner
+        $ownedGroups = self::where('owner_id', $user->id)
+            ->pluck('id')
+            ->toArray();
+            
+        $allGroupIds = array_unique(array_merge($groupIds, $ownedGroups));
+        
+        if (empty($allGroupIds)) {
+            return collect();
+        }
+        
         return self::select([
             'groups.*',
             'messages.message as last_message',
             'messages.created_at as last_message_date',
         ])
-            ->with(['owner', 'members']) // Keep eager loading
+            ->with(['owner', 'members'])
             ->leftJoin('messages', 'messages.id', '=', 'groups.last_message_id')
-            ->where(function ($q) use ($user) {
-                $q->where('owner_id', $user->id)
-                  ->orWhereExists(function ($subQuery) use ($user) {
-                      $subQuery->selectRaw(1)
-                          ->from('group_users')
-                          ->where('group_users.group_id', '=', 'groups.id')
-                          ->where('group_users.user_id', $user->id);
-                  });
-            })
+            ->whereIn('groups.id', $allGroupIds)
             ->orderByDesc('messages.created_at')
+            ->orderByDesc('groups.updated_at')
             ->orderByDesc('groups.created_at')
             ->orderBy('groups.name')
             ->get();
